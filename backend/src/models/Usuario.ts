@@ -25,7 +25,13 @@ const usuarioSchema = new Schema<IUsuario>({
   perfis: {
     type: [String],
     enum: ["admin", "supervisor", "analista"],
-    default: ["analista"]
+    default: ["analista"],
+    validate: {
+      validator: function(v: any) {
+        return Array.isArray(v) && v.length > 0;
+      },
+      message: "Perfis deve ser um array não vazio"
+    }
   },
   ativo: {
     type: Boolean,

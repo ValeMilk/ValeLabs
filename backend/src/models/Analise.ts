@@ -99,14 +99,7 @@ const analiseSchema = new mongoose.Schema<IAnaliseDocument>(
       default: null
     },
     padraoVigenteSnapshot: {
-      type: {
-        padraoId: String,
-        limiteMaximo: Number,
-        limiteMinimo: Number,
-        unidade: String,
-        criticidade: String,
-        dataVigencia: Date
-      },
+      type: mongoose.Schema.Types.Mixed,
       default: null
     },
     
