@@ -24,6 +24,7 @@ RUN apk add --no-cache git && \
     npm install --omit=dev
 
 # Copiar build da etapa anterior
+WORKDIR /app/backend
 COPY --from=builder /app/backend/dist ./dist
 
 # Expor porta
