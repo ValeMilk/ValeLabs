@@ -50,7 +50,7 @@ const auditoriaLogSchema = new mongoose.Schema<IAuditoriaLogDocument>(
     motivoAlteracao: String,
     ipOrigem: String
   },
-  { timestamps: false, immutable: true }
+  { timestamps: false }
 );
 
 // Índices para auditoria
@@ -58,11 +58,11 @@ auditoriaLogSchema.index({ analiseId: 1, timestamp: -1 });
 auditoriaLogSchema.index({ usuarioId: 1, timestamp: -1 });
 
 // Impedir edição/deleção
-auditoriaLogSchema.pre("findByIdAndUpdate", function(next) {
+auditoriaLogSchema.pre<any>("findByIdAndUpdate", function(next) {
   next(new Error("Logs de auditoria são imutáveis"));
 });
 
-auditoriaLogSchema.pre("findByIdAndDelete", function(next) {
+auditoriaLogSchema.pre<any>("findByIdAndDelete", function(next) {
   next(new Error("Logs de auditoria não podem ser deletados"));
 });
 

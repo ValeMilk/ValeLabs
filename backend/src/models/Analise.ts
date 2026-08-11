@@ -100,9 +100,12 @@ const analiseSchema = new mongoose.Schema<IAnaliseDocument>(
     },
     padraoVigenteSnapshot: {
       type: {
-        limiteIdeal: Number,
+        padraoId: String,
         limiteMaximo: Number,
-        vigemDe: Date
+        limiteMinimo: Number,
+        unidade: String,
+        criticidade: String,
+        dataVigencia: Date
       },
       default: null
     },
@@ -140,15 +143,17 @@ analiseSchema.index({ padraoVigenteId: 1 });
 analiseSchema.index({ dataAuditar: 1, statusCiclo: 1 });
 
 // Middleware pré-save para recalcular status
-analiseSchema.pre("save", function(next) {
-  this.statusCiclo = calcularStatusCiclo(
-    this.dataRealLeitura,
-    this.dataPrevistaLeitura
+analiseSchema.pre<IAnaliseDocument>("save", function(next) {
+  const doc = this as IAnaliseDocument;
+  
+  doc.statusCiclo = calcularStatusCiclo(
+    doc.dataRealLeitura,
+    doc.dataPrevistaLeitura
   );
   
-  this.statusConformidade = calcularStatusConformidade(
-    this.resultado,
-    this.padraoVigenteSnapshot
+  doc.statusConformidade = calcularStatusConformidade(
+    doc.resultado,
+    doc.padraoVigenteSnapshot
   );
   
   next();

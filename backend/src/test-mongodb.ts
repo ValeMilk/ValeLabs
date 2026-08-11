@@ -5,8 +5,13 @@ dotenv.config({ path: '.env.local' });
 
 const MONGO_URI = process.env.MONGO_URI;
 
+if (!MONGO_URI) {
+  console.error('❌ MONGO_URI não definida');
+  process.exit(1);
+}
+
 console.log('🔄 Testando conexão com MongoDB Atlas...');
-console.log(`📍 Connection String: ${MONGO_URI?.substring(0, 80)}...`);
+console.log(`📍 Connection String: ${MONGO_URI.substring(0, 80)}...`);
 
 async function testConnection() {
   try {

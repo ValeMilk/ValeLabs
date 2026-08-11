@@ -24,8 +24,8 @@ const usuarioSchema = new Schema<IUsuario>({
   },
   perfis: {
     type: [String],
-    enum: ["Admin", "Coordenação", "Analista", "Visualizador"],
-    default: ["Analista"]
+    enum: ["admin", "supervisor", "analista"],
+    default: ["analista"]
   },
   ativo: {
     type: Boolean,
