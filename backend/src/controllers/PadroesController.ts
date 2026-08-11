@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { padroesService } from "../services/PadroesService";
-import { CriarPadraoRequest, ApiResponse } from "../../shared-types";
+import { CriarPadraoRequest, ApiResponse } from "../types/shared-types";
 
 export class PadroesController {
   /**

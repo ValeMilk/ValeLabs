@@ -1,5 +1,5 @@
 import { Padrao, IPadraoDocument } from "../models/Padrao";
-import { CriarPadraoRequest } from "../../shared-types";
+import { CriarPadraoRequest } from "../types/shared-types";
 
 export class PadroesService {
   /**

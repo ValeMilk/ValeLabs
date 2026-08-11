@@ -5,7 +5,7 @@ import {
   StatusCicloAnalise,
   CriarAnaliseRequest,
   AtualizarAnaliseRequest
-} from "../../shared-types";
+} from "../types/shared-types";
 import { Analise, IAnaliseDocument } from "../models/Analise";
 import { Padrao } from "../models/Padrao";
 import { AuditoriaLog } from "../models/AuditoriaLog";

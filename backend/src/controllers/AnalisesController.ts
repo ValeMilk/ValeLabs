@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { analisesService } from "../services/AnalisesService";
-import { CriarAnaliseRequest, AtualizarAnaliseRequest, ApiResponse, PaginatedResponse } from "../../shared-types";
+import { CriarAnaliseRequest, AtualizarAnaliseRequest, ApiResponse, PaginatedResponse } from "../types/shared-types";
 
 // Estender Request para incluir usuário autenticado
 declare global {

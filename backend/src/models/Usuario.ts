@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { PerfilUsuario } from "../../shared-types";
+import { PerfilUsuario } from "../types/shared-types";
 
 export interface IUsuario extends Document {
   email: string;

@@ -1,5 +1,5 @@
 import { Analise } from "../models/Analise";
-import { StatusConformidade, Criticidade, determinarCriticidade } from "../../shared-types";
+import { StatusConformidade, Criticidade, determinarCriticidade } from "../types/shared-types";
 
 export class DashboardService {
   /**

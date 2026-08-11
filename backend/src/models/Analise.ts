@@ -5,7 +5,7 @@ import {
   PadraoSnapshot,
   calcularStatusCiclo,
   calcularStatusConformidade
-} from "../../shared-types";
+} from "../types/shared-types";
 
 export interface IAnaliseDocument extends mongoose.Document {
   dataInoculacao: Date;

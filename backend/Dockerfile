@@ -5,9 +5,11 @@ WORKDIR /app
 
 # Clone do repositório
 RUN apk add --no-cache git && \
-    git clone https://github.com/ValeMilk/ValeLabs.git . && \
-    cd backend && \
-    npm install && \
+    git clone https://github.com/ValeMilk/ValeLabs.git .
+
+WORKDIR /app/backend
+
+RUN npm install && \
     npm run build
 
 # Etapa 2: Runtime
