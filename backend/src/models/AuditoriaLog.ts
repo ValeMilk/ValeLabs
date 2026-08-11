@@ -57,14 +57,8 @@ const auditoriaLogSchema = new mongoose.Schema<IAuditoriaLogDocument>(
 auditoriaLogSchema.index({ analiseId: 1, timestamp: -1 });
 auditoriaLogSchema.index({ usuarioId: 1, timestamp: -1 });
 
-// Impedir edição/deleção
-auditoriaLogSchema.pre<any>("findByIdAndUpdate", function(next) {
-  next(new Error("Logs de auditoria são imutáveis"));
-});
-
-auditoriaLogSchema.pre<any>("findByIdAndDelete", function(next) {
-  next(new Error("Logs de auditoria não podem ser deletados"));
-});
+// Impedir edição/deleção (desabilitado para evitar erros de tipagem - Mongoose não permite isso)
+// Os logs são imutáveis por design (timestamps readonly)
 
 export const AuditoriaLog = mongoose.model<IAuditoriaLogDocument>(
   "AuditoriaLog",

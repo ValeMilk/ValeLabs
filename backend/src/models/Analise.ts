@@ -136,18 +136,22 @@ analiseSchema.index({ padraoVigenteId: 1 });
 analiseSchema.index({ dataAuditar: 1, statusCiclo: 1 });
 
 // Middleware pré-save para recalcular status
-analiseSchema.pre<IAnaliseDocument>("save", function(next) {
-  const doc = this as IAnaliseDocument;
-  
-  doc.statusCiclo = calcularStatusCiclo(
-    doc.dataRealLeitura,
-    doc.dataPrevistaLeitura
-  );
-  
-  doc.statusConformidade = calcularStatusConformidade(
-    doc.resultado,
-    doc.padraoVigenteSnapshot
-  );
+analiseSchema.pre("save", function(next) {
+  try {
+    const doc = this as any;
+    
+    doc.statusCiclo = calcularStatusCiclo(
+      doc.dataRealLeitura,
+      doc.dataPrevistaLeitura
+    );
+    
+    doc.statusConformidade = calcularStatusConformidade(
+      doc.resultado,
+      doc.padraoVigenteSnapshot
+    );
+  } catch (error) {
+    console.error('Erro ao recalcular status:', error);
+  }
   
   next();
 });

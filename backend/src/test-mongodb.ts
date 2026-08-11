@@ -3,20 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
-const MONGO_URI = process.env.MONGO_URI;
-
-if (!MONGO_URI) {
-  console.error('❌ MONGO_URI não definida');
-  process.exit(1);
-}
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/valelabs';
 
 console.log('🔄 Testando conexão com MongoDB Atlas...');
-console.log(`📍 Connection String: ${MONGO_URI.substring(0, 80)}...`);
+console.log(`📍 Connection String: ${(MONGO_URI as string).substring(0, 80)}...`);
 
 async function testConnection() {
   try {
     // Conectar com opções de retry
-    await mongoose.connect(MONGO_URI, {
+    await mongoose.connect(MONGO_URI as string, {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 10000,
       connectTimeoutMS: 10000,
