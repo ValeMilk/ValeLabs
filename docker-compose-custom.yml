@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Frontend (Nginx) - Porta 8083
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: valelabs-frontend
+    ports:
+      - "8083:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://72.61.62.17:3002/api
+    networks:
+      - valelabs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Backend (Node.js + Express) - Porta 3002
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: valelabs-backend
+    ports:
+      - "3002:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB_NAME=valelabs_microbio
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_URL=http://72.61.62.17:8083
+      - LOG_LEVEL=info
+    networks:
+      - valelabs-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  valelabs-network:
+    driver: bridge
