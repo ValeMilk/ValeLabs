@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Home, Flask, Beaker, Settings, FileText } from 'lucide-react';
+import { LogOut, Home, Beaker, Microscope, Settings, FileText } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
 
 interface LayoutProps {
@@ -34,7 +34,7 @@ export function Layout({ children }: LayoutProps) {
           />
           <NavLink
             to="/categorias"
-            icon={<Flask size={20} />}
+            icon={<Microscope size={20} />}
             label="Categorias"
           />
           <NavLink

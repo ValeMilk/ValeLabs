@@ -82,6 +82,8 @@ export function BarChartComparacao({
         return '#eab308'; // yellow
       case StatusConformidade.SEM_PADRÃO:
         return '#f59e0b'; // amber
+      default:
+        return '#6b7280';
     }
   };
 
@@ -101,11 +103,11 @@ export function BarChartComparacao({
             strokeDasharray="5 5"
             label={{ value: 'Limite Máximo', position: 'insideTopRight', offset: -5 }}
           />
-          <Bar
-            dataKey="resultado"
-            fill="#3b82f6"
+          <Bar 
+            dataKey="resultado" 
+            fill="#3b82f6" 
             name="Resultado"
-            shape={<CustomBarShape />}
+            shape={<CustomBarShape data={chartData} />}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -114,16 +116,26 @@ export function BarChartComparacao({
 }
 
 interface CustomBarShapeProps {
-  fill: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  payload?: DadoGrafico;
+  [key: string]: any;
 }
 
-function CustomBarShape({ fill, x = 0, y = 0, width = 0, height = 0, payload }: CustomBarShapeProps) {
+function CustomBarShape({ x = 0, y = 0, width = 0, height = 0, payload, data }: CustomBarShapeProps) {
   if (!payload) return null;
+
+  const getCorStatus = (status: StatusConformidade): string => {
+    switch (status) {
+      case StatusConformidade.APROVADO:
+        return '#10b981';
+      case StatusConformidade.REPROVADO:
+        return '#ef4444';
+      case StatusConformidade.PENDENTE:
+        return '#eab308';
+      case StatusConformidade.SEM_PADRÃO:
+        return '#f59e0b';
+      default:
+        return '#6b7280';
+    }
+  };
 
   const cor = getCorStatus(payload.status);
 
@@ -134,20 +146,7 @@ function CustomBarShape({ fill, x = 0, y = 0, width = 0, height = 0, payload }: 
       width={width}
       height={height}
       fill={cor}
-      radius={[8, 8, 0, 0]}
+      rx="8"
     />
   );
-}
-
-function getCorStatus(status: StatusConformidade): string {
-  switch (status) {
-    case StatusConformidade.APROVADO:
-      return '#10b981'; // green
-    case StatusConformidade.REPROVADO:
-      return '#ef4444'; // red
-    case StatusConformidade.PENDENTE:
-      return '#eab308'; // yellow
-    case StatusConformidade.SEM_PADRÃO:
-      return '#f59e0b'; // amber
-  }
 }

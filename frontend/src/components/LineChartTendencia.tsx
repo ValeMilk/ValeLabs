@@ -38,7 +38,7 @@ export function LineChartTendencia({ data, titulo }: LineChartTendenciaProps) {
   }
 
   // Agrupar dados por data
-  const dataAgrupada: Record<string, Record<string, number>> = {};
+  const dataAgrupada: Record<string, Record<string, any>> = {};
 
   data.forEach((item) => {
     const dataStr = format(new Date(item.data), 'dd/MM/yyyy', { locale: ptBR });
