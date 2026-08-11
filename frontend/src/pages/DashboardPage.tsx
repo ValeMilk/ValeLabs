@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { api } from '../services/api';
-import { DashboardCategoria, Criticidade } from '../types/shared-types';
+import type { DashboardCategoria } from '../types/shared-types';
+import { Criticidade } from '../types/shared-types';
 import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export function DashboardPage() {

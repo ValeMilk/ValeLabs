@@ -9,7 +9,8 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
-import { Analise, StatusConformidade } from '../types/shared-types';
+import type { Analise } from '../types/shared-types';
+import { StatusConformidade } from '../types/shared-types';
 
 interface BarChartComparacaoProps {
   analises: Analise[];

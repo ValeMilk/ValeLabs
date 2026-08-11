@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { api } from '../services/api';
-import { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
+import type { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
 import { Plus } from 'lucide-react';
 
 export function LancamentosPage() {

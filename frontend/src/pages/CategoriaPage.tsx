@@ -4,8 +4,7 @@ import { Layout } from '../components/Layout';
 import { LineChartTendencia } from '../components/LineChartTendencia';
 import { BarChartComparacao } from '../components/BarChartComparacao';
 import { api } from '../services/api';
-import { Analise, TendenciaAgregada } from '../types/shared-types';
-import { subDays } from 'date-fns';
+import type { Analise, TendenciaAgregada } from '../types/shared-types';
 
 type Periodo = '7d' | '30d' | '90d' | '1y';
 

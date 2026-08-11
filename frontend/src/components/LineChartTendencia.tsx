@@ -8,7 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { TendenciaAgregada } from '../types/shared-types';
+import type { TendenciaAgregada } from '../types/shared-types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { BarChartComparacao } from '../components/BarChartComparacao';
 import { api } from '../services/api';
-import { Analise } from '../types/shared-types';
+import type { Analise } from '../types/shared-types';
 
 export function ProdutoPage() {
   const { produtoId } = useParams<{ produtoId: string }>();

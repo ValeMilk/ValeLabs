@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { api } from '../services/api';
-import { Padrao, CriarPadraoRequest, Criticidade } from '../types/shared-types';
+import { Criticidade } from '../types/shared-types';
+import type { Padrao, CriarPadraoRequest } from '../types/shared-types';
 import { Plus, Trash2 } from 'lucide-react';
 
 export function PadroesPage() {

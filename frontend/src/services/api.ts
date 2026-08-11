@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LoginRequest, LoginResponse, ApiResponse } from '../types/shared-types';
+import type { LoginResponse, ApiResponse } from '../types/shared-types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 
