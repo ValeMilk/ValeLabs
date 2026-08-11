@@ -25,7 +25,7 @@ const usuarioSchema = new Schema<IUsuario>({
   perfis: {
     type: [String],
     default: ["analista"]
-  },
+  } as any,
   ativo: {
     type: Boolean,
     default: true
