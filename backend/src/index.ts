@@ -240,13 +240,5 @@ async function start() {
 }
 
 start();
-    });
-  } catch (error) {
-    console.error("Falha ao iniciar:", error);
-    process.exit(1);
-  }
-}
-
-start();
 
 export default app;
