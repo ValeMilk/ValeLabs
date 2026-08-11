@@ -136,7 +136,9 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.post("/api/auth/seed", async (req, res) => {
   try {
-    if (process.env.NODE_ENV === "production") {
+    // Permitir seed apenas em ambiente de desenvolvimento
+    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === "development";
+    if (!isDev) {
       return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
     }
     await Usuario.deleteOne({ email: "teste@valelabs.com" });
