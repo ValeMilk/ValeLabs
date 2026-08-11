@@ -141,8 +141,9 @@ analiseSchema.pre("save", function(next) {
     const doc = this as any;
     
     doc.statusCiclo = calcularStatusCiclo(
-      doc.dataRealLeitura,
-      doc.dataPrevistaLeitura
+      doc.dataInoculacao,
+      doc.dataPrevistaLeitura,
+      doc.dataRealLeitura
     );
     
     doc.statusConformidade = calcularStatusConformidade(
