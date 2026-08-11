@@ -63,11 +63,13 @@ export interface CriarAnaliseRequest {
   categoria: string;
   pontoColeta: string;
   microrganismo: string;
+  motivo?: string;
 }
 
 export interface AtualizarAnaliseRequest {
   dataRealLeitura?: string;
   resultado?: number | "INC";
+  motivo?: string;
   statusCiclo?: StatusCicloAnalise;
 }
 
@@ -91,9 +93,13 @@ export interface CriarPadraoRequest {
   microrganismo: string;
   limiteMinimo: number;
   limiteMaximo: number;
+  limiteIdeal?: number;
   unidade: string;
   criticidade: Criticidade;
   vigem: string;
+  vigemDe?: string;
+  vigemAte?: string;
+  observacoes?: string;
 }
 
 export interface Produto {

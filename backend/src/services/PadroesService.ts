@@ -12,7 +12,7 @@ export class PadroesService {
     usuarioId: string
   ): Promise<IPadraoDocument> {
     const chaveComposta = `${data.categoria}|${data.microrganismo}`;
-    const vigemDe = new Date(data.vigemDe);
+    const vigemDe = new Date(data.vigemDe || data.vigem);
 
     // 1. Validar que não existe outro padrão ativo na mesma data
     const existente = await Padrao.findOne({
