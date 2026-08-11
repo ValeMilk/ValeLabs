@@ -89,7 +89,7 @@ export class AnalisesService {
       criadoEm: new Date(),
       
       // Flags
-      motivo: data.motivo
+      motivo: data.motivo || undefined
     });
 
     // 4. Salvar (middleware pre-save recalcula status)
@@ -187,7 +187,7 @@ export class AnalisesService {
         timestamp: new Date(),
         acao: "editar",
         camposAlterados,
-        motivoAlteracao: data.motivo
+        motivoAlteracao: data.motivo || undefined
       });
     }
 

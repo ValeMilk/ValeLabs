@@ -19,17 +19,17 @@ export class PadroesController {
       const dados: CriarPadraoRequest = req.body;
 
       // Validações
-      if (!dados.categoria || !dados.microrganismo || !dados.limiteIdeal || !dados.limiteMaximo || !dados.vigemDe) {
+      if (!dados.categoria || !dados.microrganismo || dados.limiteMinimo === undefined || !dados.limiteMaximo || !dados.unidade || !dados.criticidade || !dados.vigem) {
         return res.status(400).json({
           sucesso: false,
-          erro: "Campos obrigatórios: categoria, microrganismo, limiteIdeal, limiteMaximo, vigemDe"
+          erro: "Campos obrigatórios: categoria, microrganismo, limiteMinimo, limiteMaximo, unidade, criticidade, vigem"
         });
       }
 
-      if (dados.limiteIdeal >= dados.limiteMaximo) {
+      if (dados.limiteMinimo >= dados.limiteMaximo) {
         return res.status(400).json({
           sucesso: false,
-          erro: "Limite ideal deve ser menor que limite máximo"
+          erro: "Limite mínimo deve ser menor que limite máximo"
         });
       }
 

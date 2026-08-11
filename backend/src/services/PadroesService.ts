@@ -42,8 +42,10 @@ export class PadroesService {
       microrganismo: data.microrganismo,
       chaveComposta,
       
-      limiteIdeal: data.limiteIdeal,
+      limiteMinimo: data.limiteMinimo,
       limiteMaximo: data.limiteMaximo,
+      unidade: data.unidade,
+      criticidade: data.criticidade,
       
       vigemDe,
       vigemAte: data.vigemAte ? new Date(data.vigemAte) : null,
