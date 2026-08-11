@@ -9,6 +9,7 @@ import analisesRouter from "./routes/analises";
 import padroesRouter from "./routes/padroes";
 import produtosRouter from "./routes/produtos";
 import authRouter from "./routes/auth";
+import seedRouter from "./routes/seed";
 import dashboardRouter from "./routes/dashboard";
 
 const app: Express = express();
@@ -26,6 +27,7 @@ app.get("/api/health", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRouter);  // Sem autenticação (login é aqui)
+app.use("/api/auth", seedRouter);  // Sem autenticação (seed é aqui)
 app.use("/api/produtos", produtosRouter);  // Com autenticação
 app.use("/api/dashboard", autenticarJWT, dashboardRouter);  // Com autenticação
 app.use("/api/analises", autenticarJWT, analisesRouter);
