@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { LoginResponse, ApiResponse } from '../types/shared-types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+// Use relative URL to work with Nginx proxy in production, or absolute URL from env variable
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

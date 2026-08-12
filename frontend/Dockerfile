@@ -13,8 +13,8 @@ WORKDIR /app/frontend
 # Install dependencies
 RUN npm install
 
-# Build
-RUN npm run build
+# Build with API URL injected
+RUN VITE_API_URL=/api npm run build
 
 # Stage 2: Runtime
 FROM nginx:alpine
