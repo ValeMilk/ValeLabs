@@ -164,8 +164,8 @@ app.post("/api/auth/seed", async (req, res) => {
     if (!isDev) {
       return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
     }
-    // Limpar usuários antigos
-    await Usuario.deleteMany({});
+    // Droppar collection pra remover índices antigos
+    await Usuario.collection.drop().catch(() => {});
     
     // Criar usuários de teste com diferentes perfis
     const usuarios = [
