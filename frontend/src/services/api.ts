@@ -36,12 +36,17 @@ api.interceptors.response.use(
 
 // ========== AUTH SERVICES ==========
 
+export async function getUsuarios(): Promise<any[]> {
+  const response = await api.get<ApiResponse<any[]>>('/auth/usuarios');
+  return response.data.dados || [];
+}
+
 export async function login(
-  email: string,
+  nome: string,
   senha: string
 ): Promise<LoginResponse> {
   const response = await api.post<ApiResponse<LoginResponse>>('/auth/login', {
-    email,
+    nome,
     senha,
   });
 

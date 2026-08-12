@@ -36,13 +36,16 @@ export function Layout({ children }: LayoutProps) {
             <NavLink to="/categorias" label="Categorias" isActive={isActive('/categorias')} />
             <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
             <NavLink to="/produtos" label="Produtos" isActive={isActive('/produtos')} />
+            {usuario?.perfil === 'Admin' && (
+              <NavLink to="/usuarios" label="Usuários" isActive={isActive('/usuarios')} />
+            )}
           </div>
 
           {/* Right: User Info & Logout */}
           <div className="flex items-center space-x-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-gray-800">{usuario?.nome}</p>
-              <p className="text-xs text-gray-500">{usuario?.email}</p>
+              <p className="text-xs text-gray-500">{usuario?.perfil}</p>
             </div>
             <button
               onClick={handleLogout}

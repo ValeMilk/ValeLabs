@@ -5,6 +5,7 @@ import { CategoriaPage } from './pages/CategoriaPage';
 import { ProdutoPage } from './pages/ProdutoPage';
 import { LancamentosPage } from './pages/LancamentosPage';
 import { PadroesPage } from './pages/PadroesPage';
+import { UsuariosPage } from './pages/UsuariosPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -54,6 +55,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PadroesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/usuarios"
+          element={
+            <ProtectedRoute>
+              <UsuariosPage />
             </ProtectedRoute>
           }
         />
