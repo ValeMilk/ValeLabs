@@ -725,6 +725,100 @@ app.delete("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
   }
 });
 
+// ========== ENDPOINTS PRODUTOS ==========
+
+app.get("/api/produtos", autenticar, async (req, res) => {
+  try {
+    const { categoria } = req.query;
+    let query = {};
+    if (categoria) {
+      query = { categoria: categoria as string, ativo: true };
+    } else {
+      query = { ativo: true };
+    }
+    const produtos = await Produto.find(query).sort({ categoria: 1, nome: 1 });
+    res.json({
+      sucesso: true,
+      dados: produtos
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.post("/api/produtos", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome, categoria, descricao } = req.body;
+    
+    if (!nome || !categoria) {
+      return res.status(400).json({ sucesso: false, mensagem: "Nome e categoria são obrigatórios" });
+    }
+    
+    const verificarDuplicado = await Produto.findOne({ nome: nome.trim(), categoria: categoria.trim() });
+    if (verificarDuplicado) {
+      return res.status(409).json({ sucesso: false, mensagem: "Produto já existe nesta categoria" });
+    }
+    
+    const produto = new Produto({
+      nome: nome.trim(),
+      categoria: categoria.trim(),
+      descricao: descricao?.trim() || ""
+    });
+    
+    await produto.save();
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Produto criado",
+      dados: produto
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.put("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome, categoria, descricao } = req.body;
+    
+    const atualizacoes: any = {};
+    if (nome) atualizacoes.nome = nome.trim();
+    if (categoria) atualizacoes.categoria = categoria.trim();
+    if (descricao !== undefined) atualizacoes.descricao = descricao.trim();
+    
+    const produto = await Produto.findByIdAndUpdate(req.params.id, atualizacoes, { new: true });
+    
+    if (!produto) {
+      return res.status(404).json({ sucesso: false, mensagem: "Produto não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Produto atualizado",
+      dados: produto
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.delete("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const produto = await Produto.findByIdAndDelete(req.params.id);
+    
+    if (!produto) {
+      return res.status(404).json({ sucesso: false, mensagem: "Produto não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Produto deletado",
+      dados: { nome: produto.nome, categoria: produto.categoria }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
 // ========== ERROR HANDLER ==========
 app.use((err: any, req: any, res: any) => {
   console.error("Erro:", err);

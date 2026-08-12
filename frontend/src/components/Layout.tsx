@@ -37,7 +37,10 @@ export function Layout({ children }: LayoutProps) {
             <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
             <NavLink to="/produtos" label="Produtos" isActive={isActive('/produtos')} />
             {usuario?.perfil === 'Admin' && (
-              <NavLink to="/usuarios" label="Usuários" isActive={isActive('/usuarios')} />
+              <>
+                <NavLink to="/microrganismos" label="Microrganismos" isActive={isActive('/microrganismos')} />
+                <NavLink to="/usuarios" label="Usuários" isActive={isActive('/usuarios')} />
+              </>
             )}
           </div>
 

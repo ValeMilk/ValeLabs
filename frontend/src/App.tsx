@@ -5,6 +5,7 @@ import { CategoriaPage } from './pages/CategoriaPage';
 import { ProdutoPage } from './pages/ProdutoPage';
 import { LancamentosPage } from './pages/LancamentosPage';
 import { PadroesPage } from './pages/PadroesPage';
+import { MicroorganismoPage } from './pages/MicroorganismoPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -24,7 +25,7 @@ function App() {
         />
 
         <Route
-          path="/categorias/:categoria"
+          path="/categorias"
           element={
             <ProtectedRoute>
               <CategoriaPage />
@@ -55,6 +56,15 @@ function App() {
           element={
             <ProtectedRoute>
               <PadroesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/microrganismos"
+          element={
+            <ProtectedRoute>
+              <MicroorganismoPage />
             </ProtectedRoute>
           }
         />
