@@ -160,6 +160,126 @@ app.post("/api/auth/seed", async (req, res) => {
   }
 });
 
+// POPULATE TEST DATA
+app.post("/api/data/populate", async (req, res) => {
+  try {
+    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === "development";
+    if (!isDev) {
+      return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
+    }
+
+    // Limpar dados antigos
+    await Produto.deleteMany({});
+    await Padrao.deleteMany({});
+    await Analise.deleteMany({});
+
+    // Criar produtos de teste
+    const produtos = await Produto.insertMany([
+      { nome: "Leite Integral", categoria: "Leite", descricao: "Leite integral pasteurizado" },
+      { nome: "Iogurte Natural", categoria: "Derivados", descricao: "Iogurte sem corantes" },
+      { nome: "Queijo Meia Cura", categoria: "Queijos", descricao: "Queijo meia cura 500g" },
+      { nome: "Leite Desnatado", categoria: "Leite", descricao: "Leite desnatado pasteurizado" }
+    ]);
+
+    // Criar padrões de teste
+    const hoje = new Date();
+    const proxima = new Date(hoje);
+    proxima.setDate(proxima.getDate() + 30);
+    const vigem = new Date(hoje);
+    vigem.setDate(vigem.getDate() + 180);
+
+    const padroes = await Padrao.insertMany([
+      {
+        categoria: "Leite",
+        microrganismo: "Coliformes Totais",
+        limiteMinimo: 0,
+        limiteMaximo: 100,
+        unidade: "UFC/mL",
+        criticidade: "CRÍTICO",
+        vigem,
+        proximaDataVigem: proxima,
+        ativo: true
+      },
+      {
+        categoria: "Leite",
+        microrganismo: "E. coli",
+        limiteMinimo: 0,
+        limiteMaximo: 10,
+        unidade: "UFC/mL",
+        criticidade: "CRÍTICO",
+        vigem,
+        proximaDataVigem: proxima,
+        ativo: true
+      },
+      {
+        categoria: "Derivados",
+        microrganismo: "Bactérias Lácticas",
+        limiteMinimo: 1000000,
+        limiteMaximo: 50000000,
+        unidade: "UFC/mL",
+        criticidade: "CONFORME",
+        vigem,
+        proximaDataVigem: proxima,
+        ativo: true
+      },
+      {
+        categoria: "Queijos",
+        microrganismo: "Staphylococcus aureus",
+        limiteMinimo: 0,
+        limiteMaximo: 1000,
+        unidade: "UFC/g",
+        criticidade: "CRÍTICO",
+        vigem,
+        proximaDataVigem: proxima,
+        ativo: true
+      }
+    ]);
+
+    // Criar análises de teste
+    const usuario = await Usuario.findOne({ email: "teste@valelabs.com" });
+    const criadoPor = usuario ? usuario._id.toString() : "sistema";
+
+    const datas = [];
+    for (let i = 0; i < 12; i++) {
+      const data = new Date();
+      data.setDate(data.getDate() - i);
+      datas.push(data);
+    }
+
+    const analises = [
+      // Leite - Coliformes
+      { dataInoculacao: datas[0], dataPrevistaLeitura: datas[0], dataRealLeitura: datas[0], produtoId: produtos[0]._id, categoria: "Leite", microrganismo: "Coliformes Totais", statusCiclo: "lida", statusConformidade: "APROVADO", resultado: 50, criadoPor },
+      { dataInoculacao: datas[1], dataPrevistaLeitura: datas[1], dataRealLeitura: datas[1], produtoId: produtos[0]._id, categoria: "Leite", microrganismo: "Coliformes Totais", statusCiclo: "lida", statusConformidade: "APROVADO", resultado: 75, criadoPor },
+      { dataInoculacao: datas[2], dataPrevistaLeitura: datas[2], dataRealLeitura: datas[2], produtoId: produtos[0]._id, categoria: "Leite", microrganismo: "Coliformes Totais", statusCiclo: "lida", statusConformidade: "REPROVADO", resultado: 250, criadoPor },
+      { dataInoculacao: datas[3], dataPrevistaLeitura: datas[3], dataRealLeitura: null, produtoId: produtos[3]._id, categoria: "Leite", microrganismo: "Coliformes Totais", statusCiclo: "aguardando_leitura", statusConformidade: "PENDENTE", resultado: null, criadoPor },
+      
+      // Derivados - Bactérias Lácticas
+      { dataInoculacao: datas[1], dataPrevistaLeitura: datas[1], dataRealLeitura: datas[1], produtoId: produtos[1]._id, categoria: "Derivados", microrganismo: "Bactérias Lácticas", statusCiclo: "lida", statusConformidade: "APROVADO", resultado: 10000000, criadoPor },
+      { dataInoculacao: datas[2], dataPrevistaLeitura: datas[2], dataRealLeitura: datas[2], produtoId: produtos[1]._id, categoria: "Derivados", microrganismo: "Bactérias Lácticas", statusCiclo: "lida", statusConformidade: "APROVADO", resultado: 15000000, criadoPor },
+      { dataInoculacao: datas[3], dataPrevistaLeitura: datas[3], dataRealLeitura: null, produtoId: produtos[1]._id, categoria: "Derivados", microrganismo: "Bactérias Lácticas", statusCiclo: "aguardando_leitura", statusConformidade: "PENDENTE", resultado: null, criadoPor },
+      
+      // Queijos - Staphylococcus
+      { dataInoculacao: datas[0], dataPrevistaLeitura: datas[0], dataRealLeitura: datas[0], produtoId: produtos[2]._id, categoria: "Queijos", microrganismo: "Staphylococcus aureus", statusCiclo: "lida", statusConformidade: "APROVADO", resultado: 500, criadoPor },
+      { dataInoculacao: datas[2], dataPrevistaLeitura: datas[2], dataRealLeitura: datas[2], produtoId: produtos[2]._id, categoria: "Queijos", microrganismo: "Staphylococcus aureus", statusCiclo: "lida", statusConformidade: "REPROVADO", resultado: 2000, criadoPor },
+      { dataInoculacao: datas[4], dataPrevistaLeitura: datas[4], dataRealLeitura: null, produtoId: produtos[2]._id, categoria: "Queijos", microrganismo: "Staphylococcus aureus", statusCiclo: "inoculada", statusConformidade: "PENDENTE", resultado: null, criadoPor }
+    ];
+
+    await Analise.insertMany(analises);
+
+    res.json({
+      sucesso: true,
+      mensagem: "Dados de teste criados com sucesso",
+      dados: {
+        produtosCount: produtos.length,
+        padroesCount: padroes.length,
+        analisesCount: analises.length
+      }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
 app.get("/api/auth/me", autenticar, async (req, res) => {
   try {
     const usuarioId = (req as any).usuario?.id;

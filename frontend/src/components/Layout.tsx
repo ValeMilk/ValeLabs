@@ -17,12 +17,16 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-lg">
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-indigo-600">VML</h1>
-          <p className="text-sm text-gray-600">Vale Milk Labs</p>
+      <aside className="w-64 bg-gradient-to-b from-gray-900 to-gray-800 shadow-xl">
+        <div className="p-6 border-b border-gray-700">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-blue-400 bg-clip-text text-transparent">VML</h1>
+          <p className="text-sm text-gray-400 mt-1">Vale Milk Labs</p>
+          <div className="mt-4 px-3 py-2 bg-gray-800 rounded-lg">
+            <p className="text-xs text-gray-400 font-medium">Sistema de Análises</p>
+            <p className="text-xs text-gray-500">Microbiológicas</p>
+          </div>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -49,14 +53,14 @@ export function Layout({ children }: LayoutProps) {
           />
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-900">{usuario?.nome}</p>
-            <p className="text-xs text-gray-500">{usuario?.email}</p>
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700 bg-gradient-to-t from-gray-900 to-gray-800">
+          <div className="mb-4 bg-gray-700 bg-opacity-50 rounded-lg p-3">
+            <p className="text-sm font-medium text-gray-100 truncate">{usuario?.nome}</p>
+            <p className="text-xs text-gray-400 truncate">{usuario?.email}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
           >
             <LogOut size={18} />
             <span>Sair</span>
@@ -82,9 +86,9 @@ function NavLink({ to, icon, label }: NavLinkProps) {
   return (
     <Link
       to={to}
-      className="flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+      className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white rounded-lg transition-all group"
     >
-      {icon}
+      <span className="text-gray-400 group-hover:text-indigo-400 transition-colors">{icon}</span>
       <span>{label}</span>
     </Link>
   );
