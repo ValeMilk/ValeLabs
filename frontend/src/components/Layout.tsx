@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Package } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
 
 interface LayoutProps {
@@ -25,14 +25,8 @@ export function Layout({ children }: LayoutProps) {
       <nav className="bg-white shadow border-b border-gray-200">
         <div className="max-w-full mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Package className="text-white" size={22} />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-gray-800">VML</p>
-              <p className="text-xs text-gray-500 -mt-1">Vale Milk Labs</p>
-            </div>
+          <Link to="/dashboard" className="flex items-center">
+            <img src="/logo.png" alt="Vale Labs" className="h-12 w-auto" />
           </Link>
 
           {/* Center Navigation */}
