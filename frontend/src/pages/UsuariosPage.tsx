@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
@@ -17,7 +18,7 @@ export function UsuariosPage() {
   const [erro, setErro] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Usuario | null>(null);
-  const [formData, setFormData] = useState({ nome: '', perfil: 'Qualidade', senha: '' });
+  const [formData, setFormData] = useState({ nome: '', perfil: 'Qualidade', senha: '', ativo: true });
   const [salvando, setSalvando] = useState(false);
   const navigate = useNavigate();
 
@@ -46,13 +47,13 @@ export function UsuariosPage() {
 
   const abrirNovoUsuario = () => {
     setEditando(null);
-    setFormData({ nome: '', perfil: 'Qualidade', senha: '' });
+    setFormData({ nome: '', perfil: 'Qualidade', senha: '', ativo: true });
     setShowModal(true);
   };
 
   const abrirEditar = (usuario: Usuario) => {
     setEditando(usuario);
-    setFormData({ nome: usuario.nome, perfil: usuario.perfil, senha: '' });
+    setFormData({ nome: usuario.nome, perfil: usuario.perfil, senha: '', ativo: usuario.ativo });
     setShowModal(true);
   };
 
@@ -69,6 +70,7 @@ export function UsuariosPage() {
         const dadosAtualizacao: any = {
           nome: formData.nome,
           perfil: formData.perfil,
+          ativo: formData.ativo,
         };
         // Incluir senha se foi preenchida
         if (formData.senha.trim()) {
@@ -195,10 +197,10 @@ export function UsuariosPage() {
         </table>
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] px-4">
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl z-[10000]">
+      {/* Modal usando Portal - renderiza fora da hierarquia */}
+      {showModal && createPortal(
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editando ? 'Editar Usuário' : 'Novo Usuário'}
             </h2>
@@ -265,10 +267,8 @@ export function UsuariosPage() {
                 <input
                   type="checkbox"
                   id="ativo"
-                  defaultChecked={editando ? editando.ativo : true}
-                  onChange={(e) => {
-                    // Você pode adicionar um campo ativo se desejar
-                  }}
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
@@ -295,7 +295,8 @@ export function UsuariosPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
