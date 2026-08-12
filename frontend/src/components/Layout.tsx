@@ -33,9 +33,8 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex items-center space-x-1">
             <NavLink to="/dashboard" label="Dashboard" isActive={isActive('/dashboard')} />
             <NavLink to="/lancamentos" label="Lançamentos" isActive={isActive('/lancamentos')} />
-            <NavLink to="/categorias" label="Categorias" isActive={isActive('/categorias')} />
+            <NavLink to="/categorias" label="Produtos" isActive={isActive('/categorias')} />
             <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
-            <NavLink to="/produtos" label="Produtos" isActive={isActive('/produtos')} />
             {usuario?.perfil === 'Admin' && (
               <>
                 <NavLink to="/microrganismos" label="Microrganismos" isActive={isActive('/microrganismos')} />
