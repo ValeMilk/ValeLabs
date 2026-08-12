@@ -31,10 +31,9 @@ async function conectarMongoDB() {
 
 // Schemas simples
 const usuarioSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  nome: { type: String, required: true },
+  nome: { type: String, required: true, unique: true },
   senha: { type: String, required: true },
-  perfis: { type: [String], default: ["analista"] },
+  perfil: { type: String, enum: ["Admin", "Diretora", "Qualidade"], default: "Qualidade" },
   ativo: { type: Boolean, default: true },
   criadoEm: { type: Date, default: Date.now }
 });
@@ -82,7 +81,7 @@ const Produto = mongoose.model("Produto", produtoSchema);
 const Padrao = mongoose.model("Padrao", padraoSchema);
 const Analise = mongoose.model("Analise", analiseSchema);
 
-// ========== MIDDLEWARE AUTENTICAÇÃO ==========
+// ========== MIDDLEWARE AUTENTICAÇÃO & AUTORIZAÇÃO ==========
 function autenticar(req: any, res: any, next: any) {
   try {
     const header = req.headers.authorization;
@@ -91,11 +90,21 @@ function autenticar(req: any, res: any, next: any) {
     }
     const token = header.replace("Bearer ", "");
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.usuario = { id: decoded.id, email: decoded.email };
+    req.usuario = { id: decoded.id, nome: decoded.nome, perfil: decoded.perfil };
     next();
   } catch {
     res.status(401).json({ sucesso: false, mensagem: "Token inválido" });
   }
+}
+
+function autorizarAdmin(req: any, res: any, next: any) {
+  if (!req.usuario) {
+    return res.status(401).json({ sucesso: false, mensagem: "Não autenticado" });
+  }
+  if (req.usuario.perfil !== "Admin") {
+    return res.status(403).json({ sucesso: false, mensagem: "Apenas Admin pode acessar" });
+  }
+  next();
 }
 
 // ========== ROUTES ==========
@@ -108,26 +117,40 @@ app.get("/api/health", (req, res) => {
 // AUTH
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const { email, senha } = req.body;
-    if (!email || !senha) {
-      return res.status(400).json({ sucesso: false, mensagem: "Email e senha são obrigatórios" });
+    const { nome, senha } = req.body;
+    if (!nome || !senha) {
+      return res.status(400).json({ sucesso: false, mensagem: "Nome e senha são obrigatórios" });
     }
-    const usuario = await Usuario.findOne({ email });
+    const usuario = await Usuario.findOne({ nome });
     if (!usuario) {
-      return res.status(401).json({ sucesso: false, mensagem: "Email ou senha incorretos" });
+      return res.status(401).json({ sucesso: false, mensagem: "Usuário ou senha incorretos" });
     }
     const senhaValida = await bcryptjs.compare(senha, usuario.senha);
     if (!senhaValida) {
-      return res.status(401).json({ sucesso: false, mensagem: "Email ou senha incorretos" });
+      return res.status(401).json({ sucesso: false, mensagem: "Usuário ou senha incorretos" });
     }
-    const token = jwt.sign({ id: usuario._id, email: usuario.email }, JWT_SECRET, { expiresIn: "24h" });
+    const token = jwt.sign({ id: usuario._id, nome: usuario.nome, perfil: usuario.perfil }, JWT_SECRET, { expiresIn: "24h" });
     res.json({
       sucesso: true,
       mensagem: "Login realizado",
       dados: {
         token,
-        usuario: { _id: usuario._id, email: usuario.email, nome: usuario.nome, perfil: usuario.perfis }
+        usuario: { _id: usuario._id, nome: usuario.nome, perfil: usuario.perfil }
       }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// Listar usuários para dropdown (sem autenticação)
+app.get("/api/auth/usuarios", async (req, res) => {
+  try {
+    const usuarios = await Usuario.find({ ativo: true }).select("_id nome perfil").sort("nome");
+    res.json({
+      sucesso: true,
+      mensagem: "Usuários carregados",
+      dados: usuarios
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
@@ -141,19 +164,111 @@ app.post("/api/auth/seed", async (req, res) => {
     if (!isDev) {
       return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
     }
-    await Usuario.deleteOne({ email: "teste@valelabs.com" });
-    const senhaHash = await bcryptjs.hash("Teste@123", 10);
-    const usuario = new Usuario({
-      email: "teste@valelabs.com",
-      nome: "Usuário Teste",
-      senha: senhaHash,
-      perfis: ["analista"]
+    // Limpar usuários antigos
+    await Usuario.deleteMany({});
+    
+    // Criar usuários de teste com diferentes perfis
+    const usuarios = [
+      { nome: "Admin", perfil: "Admin", senha: "Admin@123" },
+      { nome: "Diretora", perfil: "Diretora", senha: "Diretora@123" },
+      { nome: "Qualidade", perfil: "Qualidade", senha: "Qualidade@123" }
+    ];
+    
+    const usuariosCriados = [];
+    for (const u of usuarios) {
+      const senhaHash = await bcryptjs.hash(u.senha, 10);
+      const usuario = new Usuario({
+        nome: u.nome,
+        perfil: u.perfil,
+        senha: senhaHash
+      });
+      await usuario.save();
+      usuariosCriados.push({ nome: u.nome, perfil: u.perfil });
+    }
+    
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Usuários de teste criados",
+      dados: usuariosCriados
     });
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// ========== ADMIN: CRUD USUÁRIOS ==========
+
+// GET all usuários (admin only)
+app.get("/api/admin/usuarios", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const usuarios = await Usuario.find().select("-senha").sort("nome");
+    res.json({
+      sucesso: true,
+      mensagem: "Usuários carregados",
+      dados: usuarios
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// POST criar usuário (admin only)
+app.post("/api/admin/usuarios", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome, senha, perfil } = req.body;
+    if (!nome || !senha || !perfil) {
+      return res.status(400).json({ sucesso: false, mensagem: "Nome, senha e perfil são obrigatórios" });
+    }
+    const existe = await Usuario.findOne({ nome });
+    if (existe) {
+      return res.status(400).json({ sucesso: false, mensagem: "Usuário já existe" });
+    }
+    const senhaHash = await bcryptjs.hash(senha, 10);
+    const usuario = new Usuario({ nome, senha: senhaHash, perfil, ativo: true });
     await usuario.save();
     res.status(201).json({
       sucesso: true,
-      mensagem: "Usuário de teste criado",
-      dados: { email: "teste@valelabs.com", senha: "Teste@123" }
+      mensagem: "Usuário criado",
+      dados: { _id: usuario._id, nome: usuario.nome, perfil: usuario.perfil, ativo: usuario.ativo }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// PUT editar usuário (admin only)
+app.put("/api/admin/usuarios/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome, perfil, ativo } = req.body;
+    if (!nome && !perfil && ativo === undefined) {
+      return res.status(400).json({ sucesso: false, mensagem: "Forneça pelo menos um campo para atualizar" });
+    }
+    const usuario = await Usuario.findByIdAndUpdate(req.params.id, { nome, perfil, ativo }, { new: true }).select("-senha");
+    if (!usuario) {
+      return res.status(404).json({ sucesso: false, mensagem: "Usuário não encontrado" });
+    }
+    res.json({
+      sucesso: true,
+      mensagem: "Usuário atualizado",
+      dados: usuario
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// DELETE usuário (admin only)
+app.delete("/api/admin/usuarios/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const usuario = await Usuario.findByIdAndDelete(req.params.id);
+    if (!usuario) {
+      return res.status(404).json({ sucesso: false, mensagem: "Usuário não encontrado" });
+    }
+    res.json({
+      sucesso: true,
+      mensagem: "Usuário deletado",
+      dados: { nome: usuario.nome }
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
@@ -236,7 +351,7 @@ app.post("/api/data/populate", async (req, res) => {
     ]);
 
     // Criar análises de teste
-    const usuario = await Usuario.findOne({ email: "teste@valelabs.com" });
+    const usuario = await Usuario.findOne({ nome: "Admin" });
     const criadoPor = usuario ? usuario._id.toString() : "sistema";
 
     const datas = [];
@@ -286,14 +401,14 @@ app.get("/api/auth/me", autenticar, async (req, res) => {
     if (!usuarioId) {
       return res.status(401).json({ sucesso: false, mensagem: "Não autenticado" });
     }
-    const usuario = await Usuario.findById(usuarioId);
+    const usuario = await Usuario.findById(usuarioId).select("-senha");
     if (!usuario) {
       return res.status(404).json({ sucesso: false, mensagem: "Usuário não encontrado" });
     }
     res.json({
       sucesso: true,
       mensagem: "Usuário encontrado",
-      dados: { _id: usuario._id, email: usuario.email, nome: usuario.nome, perfil: usuario.perfis }
+      dados: { _id: usuario._id, nome: usuario.nome, perfil: usuario.perfil }
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
