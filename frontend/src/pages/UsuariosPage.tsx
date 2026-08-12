@@ -199,111 +199,119 @@ export function UsuariosPage() {
 
       {/* Modal - renderizado diretamente no componente */}
       {showModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] px-4 pointer-events-auto"
-          onClick={(e) => {
-            console.log('Clicou no overlay');
-            if (e.target === e.currentTarget) {
-              setShowModal(false);
-            }
-          }}
-        >
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl z-[10000]" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {editando ? 'Editar Usuário' : 'Novo Usuário'}
-            </h2>
+        <>
+          {/* Overlay invisível - apenas bloqueia interação com fundo */}
+          <div 
+            className="fixed inset-0 z-[9998]"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowModal(false);
+              }
+            }}
+          />
+          
+          {/* Modal com fundo branco */}
+          <div className="fixed inset-0 flex items-center justify-center z-[9999] px-4 pointer-events-none">
+            <div 
+              className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl pointer-events-auto" 
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                {editando ? 'Editar Usuário' : 'Novo Usuário'}
+              </h2>
 
-            <div className="space-y-5">
-              {/* Nome */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  placeholder="Nome do usuário"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Senha */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Senha
-                </label>
-                <input
-                  type="password"
-                  value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {editando && (
-                  <p className="text-xs text-gray-500 mt-1">Deixe em branco para manter a senha atual</p>
-                )}
-                {!editando && (
-                  <p className="text-xs text-gray-500 mt-1">Obrigatório para novo usuário</p>
-                )}
-              </div>
-
-              {/* Perfil */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Perfil
-                </label>
-                <div className="space-y-2 border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto">
-                  {['Admin', 'Diretora', 'Qualidade'].map((perfil) => (
-                    <label key={perfil} className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="perfil"
-                        value={perfil}
-                        checked={formData.perfil === perfil}
-                        onChange={(e) => setFormData({ ...formData, perfil: e.target.value as any })}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm font-medium text-gray-700">{perfil}</span>
-                    </label>
-                  ))}
+              <div className="space-y-5">
+                {/* Nome */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nome}
+                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    placeholder="Nome do usuário"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
-              </div>
 
-              {/* Ativo */}
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="ativo"
-                  checked={formData.ativo}
-                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
-                  Usuário ativo
-                </label>
-              </div>
+                {/* Senha */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Senha
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.senha}
+                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {editando && (
+                    <p className="text-xs text-gray-500 mt-1">Deixe em branco para manter a senha atual</p>
+                  )}
+                  {!editando && (
+                    <p className="text-xs text-gray-500 mt-1">Obrigatório para novo usuário</p>
+                  )}
+                </div>
 
-              {/* Botões */}
-              <div className="flex space-x-3 pt-6 border-t">
-                <button
-                  onClick={() => setShowModal(false)}
-                  disabled={salvando}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={salvarUsuario}
-                  disabled={salvando}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
-                >
-                  {salvando ? 'Salvando...' : editando ? 'Atualizar' : 'Criar'}
-                </button>
+                {/* Perfil */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Perfil
+                  </label>
+                  <div className="space-y-2 border border-gray-300 rounded-lg p-3 max-h-40 overflow-y-auto">
+                    {['Admin', 'Diretora', 'Qualidade'].map((perfil) => (
+                      <label key={perfil} className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="perfil"
+                          value={perfil}
+                          checked={formData.perfil === perfil}
+                          onChange={(e) => setFormData({ ...formData, perfil: e.target.value as any })}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">{perfil}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ativo */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="ativo"
+                    checked={formData.ativo}
+                    onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="ativo" className="text-sm font-medium text-gray-700">
+                    Usuário ativo
+                  </label>
+                </div>
+
+                {/* Botões */}
+                <div className="flex space-x-3 pt-6 border-t">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    disabled={salvando}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={salvarUsuario}
+                    disabled={salvando}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    {salvando ? 'Salvando...' : editando ? 'Atualizar' : 'Criar'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
