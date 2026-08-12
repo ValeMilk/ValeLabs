@@ -96,7 +96,7 @@ function autenticar(req, res, next) {
         next();
     }
     catch {
-        res.status(401).json({ sucesso: false, mensagem: "Token inválido" });
+        return res.status(401).json({ sucesso: false, mensagem: "Token inválido" });
     }
 }
 function autorizarAdmin(req, res, next) {

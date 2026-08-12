@@ -100,7 +100,7 @@ function autenticar(req: any, res: any, next: any) {
     req.usuario = { id: decoded.id, nome: decoded.nome, perfil: decoded.perfil };
     next();
   } catch {
-    res.status(401).json({ sucesso: false, mensagem: "Token inválido" });
+    return res.status(401).json({ sucesso: false, mensagem: "Token inválido" });
   }
 }
 
