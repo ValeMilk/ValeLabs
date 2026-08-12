@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Home, Beaker, Microscope, Settings, FileText, Package } from 'lucide-react';
+import { LogOut, Package } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
 
 interface LayoutProps {
@@ -10,58 +10,60 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const usuario = getUsuario();
+  const location = useLocation();
 
   const handleLogout = async () => {
     logout();
     navigate('/login');
   };
 
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow flex flex-col border-r border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center space-x-2 mb-1">
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Navbar */}
+      <nav className="bg-white shadow border-b border-gray-200">
+        <div className="max-w-full mx-auto px-6 h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link to="/dashboard" className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <Package className="text-white" size={22} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-800">VML</h1>
-              <p className="text-xs text-gray-500">Vale Milk Labs</p>
+              <p className="text-lg font-bold text-gray-800">VML</p>
+              <p className="text-xs text-gray-500 -mt-1">Vale Milk Labs</p>
             </div>
+          </Link>
+
+          {/* Center Navigation */}
+          <div className="flex items-center space-x-1">
+            <NavLink to="/dashboard" label="Dashboard" isActive={isActive('/dashboard')} />
+            <NavLink to="/lancamentos" label="Lançamentos" isActive={isActive('/lancamentos')} />
+            <NavLink to="/categorias" label="Categorias" isActive={isActive('/categorias')} />
+            <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
+            <NavLink to="/produtos" label="Produtos" isActive={isActive('/produtos')} />
           </div>
-          <div className="mt-4 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
-            <p className="text-xs font-medium text-blue-800">Análises Microbiológicas</p>
-            <p className="text-xs text-blue-600">Acompanhamento Dinâmico</p>
+
+          {/* Right: User Info & Logout */}
+          <div className="flex items-center space-x-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold text-gray-800">{usuario?.nome}</p>
+              <p className="text-xs text-gray-500">{usuario?.email}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+            >
+              <LogOut size={16} />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
           </div>
         </div>
-
-        <nav className="p-4 space-y-1 flex-1">
-          <NavLink to="/dashboard" icon={<Home size={20} />} label="Dashboard" />
-          <NavLink to="/lancamentos" icon={<Beaker size={20} />} label="Lançamentos" />
-          <NavLink to="/categorias" icon={<Microscope size={20} />} label="Categorias" />
-          <NavLink to="/padroes" icon={<Settings size={20} />} label="Padrões" />
-          <NavLink to="/produtos" icon={<FileText size={20} />} label="Produtos" />
-        </nav>
-
-        <div className="p-4 border-t border-gray-100">
-          <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm font-semibold text-gray-800 truncate">{usuario?.nome}</p>
-            <p className="text-xs text-gray-500 truncate">{usuario?.email}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
-          >
-            <LogOut size={16} />
-            <span>Sair</span>
-          </button>
-        </div>
-      </aside>
+      </nav>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-8">{children}</div>
+        <div className="max-w-full mx-auto px-6 py-8">{children}</div>
       </main>
     </div>
   );
@@ -69,25 +71,24 @@ export function Layout({ children }: LayoutProps) {
 
 interface NavLinkProps {
   to: string;
-  icon: ReactNode;
   label: string;
+  isActive: boolean;
 }
 
-function NavLink({ to, icon, label }: NavLinkProps) {
-  const location = useLocation();
-  const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
-
+function NavLink({ to, label, isActive }: NavLinkProps) {
   return (
     <Link
       to={to}
-      className={
-        isActive
-          ? 'flex items-center space-x-3 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg font-medium transition-colors'
-          : 'flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors'
-      }
+      className={`
+        px-4 py-2 text-sm font-medium rounded-lg transition-colors
+        ${
+          isActive
+            ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
+            : 'text-gray-700 hover:bg-gray-50'
+        }
+      `}
     >
-      <span className={isActive ? 'text-blue-600' : 'text-gray-500'}>{icon}</span>
-      <span className="text-sm">{label}</span>
+      {label}
     </Link>
   );
 }
