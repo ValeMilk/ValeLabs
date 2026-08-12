@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../services/api';
-import { Package, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -30,11 +30,8 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-100">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-lg mb-4">
-              <Package className="text-white" size={32} />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">Vale Milk Labs</h1>
-            <p className="text-sm text-gray-500">Acompanhamento Microbiológico</p>
+            <img src="/logo.png" alt="Vale Labs" className="h-20 w-auto mx-auto mb-4" />
+            <p className="text-sm text-gray-500 font-medium">Acompanhamento Microbiológico</p>
           </div>
 
           {erro && (
