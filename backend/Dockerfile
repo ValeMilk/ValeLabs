@@ -10,6 +10,7 @@ RUN apk add --no-cache git && \
 WORKDIR /app/backend
 
 RUN npm install && \
+    chmod +x node_modules/.bin/* && \
     npm run build
 
 # Etapa 2: Runtime
