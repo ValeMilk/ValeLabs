@@ -152,9 +152,17 @@ export interface PaginatedResponse<T> {
 export interface DashboardCategoria {
   categoria: string;
   totalAnalises: number;
+  // Eixo 1: Ciclo
+  inoculadas: number;
+  aguardandoLeitura: number;
+  atrasadas: number;
+  lidas: number;
+  // Eixo 2: Conformidade
   aprovadas: number;
   reprovadas: number;
+  semPadrao: number;
   pendentes: number;
+  taxaReprovacao: number;
   criticidade: Criticidade;
 }
 

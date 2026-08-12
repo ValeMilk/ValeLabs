@@ -304,6 +304,8 @@ app.get("/api/auth/me", autenticar, async (req, res) => {
 app.get("/api/dashboard/categorias", autenticar, async (req, res) => {
   try {
     const analises = await Analise.find({});
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
     const categorias = new Map();
 
     for (const analise of analises) {
@@ -312,23 +314,53 @@ app.get("/api/dashboard/categorias", autenticar, async (req, res) => {
         categorias.set(cat, {
           categoria: cat,
           totalAnalises: 0,
+          // Eixo 1: Ciclo
+          inoculadas: 0,
+          aguardandoLeitura: 0,
+          atrasadas: 0,
+          lidas: 0,
+          // Eixo 2: Conformidade (só das lidas)
           aprovadas: 0,
           reprovadas: 0,
+          semPadrao: 0,
           pendentes: 0,
           criticidade: "CONFORME"
         });
       }
       const stats = categorias.get(cat);
       stats.totalAnalises++;
+
+      // Ciclo
+      if (analise.statusCiclo === "inoculada") {
+        stats.inoculadas++;
+      } else if (analise.statusCiclo === "aguardando_leitura") {
+        stats.aguardandoLeitura++;
+        const prev = analise.dataPrevistaLeitura ? new Date(analise.dataPrevistaLeitura) : null;
+        if (prev && prev < hoje) stats.atrasadas++;
+      } else if (analise.statusCiclo === "lida") {
+        stats.lidas++;
+      }
+
+      // Conformidade
       if (analise.statusConformidade === "APROVADO") {
         stats.aprovadas++;
       } else if (analise.statusConformidade === "REPROVADO") {
         stats.reprovadas++;
-        stats.criticidade = "CRÍTICO";
+      } else if (analise.statusConformidade === "SEM_PADRÃO") {
+        stats.semPadrao++;
       } else if (analise.statusConformidade === "PENDENTE") {
         stats.pendentes++;
-        if (stats.criticidade !== "CRÍTICO") stats.criticidade = "ATENÇÃO";
       }
+    }
+
+    // Criticidade: baseada em % de reprovação sobre as lidas
+    for (const stats of categorias.values()) {
+      const totalLidas = stats.lidas || 0;
+      const taxaReprov = totalLidas > 0 ? (stats.reprovadas / totalLidas) * 100 : 0;
+      if (taxaReprov >= 30) stats.criticidade = "CRÍTICO";
+      else if (taxaReprov >= 10 || stats.atrasadas > 0) stats.criticidade = "ATENÇÃO";
+      else stats.criticidade = "CONFORME";
+      stats.taxaReprovacao = Math.round(taxaReprov);
     }
 
     res.json({
