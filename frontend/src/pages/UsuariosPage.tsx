@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
@@ -198,10 +197,10 @@ export function UsuariosPage() {
         </table>
       </div>
 
-      {/* Modal usando Portal - renderiza fora da hierarquia */}
-      {showModal && createPortal(
+      {/* Modal - renderizado diretamente no componente */}
+      {showModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] px-4 pointer-events-auto"
           onClick={(e) => {
             console.log('Clicou no overlay');
             if (e.target === e.currentTarget) {
@@ -209,7 +208,7 @@ export function UsuariosPage() {
             }
           }}
         >
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl">
+          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl z-[10000]" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editando ? 'Editar Usuário' : 'Novo Usuário'}
             </h2>
@@ -304,8 +303,7 @@ export function UsuariosPage() {
               </div>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   );
