@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Layout } from '../components/Layout';
 import { LineChartTendencia } from '../components/LineChartTendencia';
 import { BarChartComparacao } from '../components/BarChartComparacao';
 import { api } from '../services/api';
@@ -41,17 +40,14 @@ export function CategoriaPage() {
 
   if (carregando) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-96">
-          <div className="text-gray-500">Carregando...</div>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center h-96">
+        <div className="text-gray-500">Carregando...</div>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Categoria: {categoria}

@@ -1,6 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layout } from '../components/Layout';
 import { api } from '../services/api';
 import type { DashboardCategoria } from '../types/shared-types';
 import { Criticidade } from '../types/shared-types';
@@ -85,8 +84,7 @@ export function DashboardPage() {
   const totalInoculadas = categorias.reduce((s, c) => s + c.inoculadas, 0);
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -331,7 +329,6 @@ export function DashboardPage() {
           </div>
         )}
       </div>
-    </Layout>
   );
 }
 

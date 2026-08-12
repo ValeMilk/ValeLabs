@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '../components/Layout';
 import { api } from '../services/api';
 import type { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
 import { Plus } from 'lucide-react';
@@ -85,22 +84,19 @@ export function LancamentosPage() {
 
   if (carregando) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-96">
-          <div className="text-gray-500">Carregando...</div>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center h-96">
+        <div className="text-gray-500">Carregando...</div>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
-            <p className="text-gray-600">Registre novas análises de laboratório</p>
-          </div>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
+          <p className="text-gray-600">Registre novas análises de laboratório</p>
+        </div>
           <button
             onClick={() => setMostraForm(!mostraForm)}
             className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -301,6 +297,6 @@ export function LancamentosPage() {
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 }

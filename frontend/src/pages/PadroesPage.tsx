@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Layout } from '../components/Layout';
 import { api } from '../services/api';
 import { Criticidade } from '../types/shared-types';
 import type { Padrao, CriarPadraoRequest } from '../types/shared-types';
@@ -91,19 +90,16 @@ export function PadroesPage() {
 
   if (carregando) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center h-96">
-          <div className="text-gray-500">Carregando...</div>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center h-96">
+        <div className="text-gray-500">Carregando...</div>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-8">
+        <div>
             <h1 className="text-3xl font-bold text-gray-900">Padrões</h1>
             <p className="text-gray-600">
               Gerencie os padrões de qualidade microbiológica
@@ -333,6 +329,5 @@ export function PadroesPage() {
           </div>
         </div>
       </div>
-    </Layout>
   );
 }
