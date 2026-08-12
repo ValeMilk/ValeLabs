@@ -239,11 +239,23 @@ app.post("/api/admin/usuarios", autenticar, autorizarAdmin, async (req, res) => 
 // PUT editar usuário (admin only)
 app.put("/api/admin/usuarios/:id", autenticar, autorizarAdmin, async (req, res) => {
   try {
-    const { nome, perfil, ativo } = req.body;
-    if (!nome && !perfil && ativo === undefined) {
+    const { nome, perfil, ativo, senha } = req.body;
+    if (!nome && !perfil && ativo === undefined && !senha) {
       return res.status(400).json({ sucesso: false, mensagem: "Forneça pelo menos um campo para atualizar" });
     }
-    const usuario = await Usuario.findByIdAndUpdate(req.params.id, { nome, perfil, ativo }, { new: true }).select("-senha");
+    
+    const dadosAtualizacao: any = {};
+    if (nome) dadosAtualizacao.nome = nome;
+    if (perfil) dadosAtualizacao.perfil = perfil;
+    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+    
+    // Se senha foi fornecida, fazer hash e incluir
+    if (senha && senha.trim()) {
+      const senhaHash = await bcryptjs.hash(senha, 10);
+      dadosAtualizacao.senha = senhaHash;
+    }
+    
+    const usuario = await Usuario.findByIdAndUpdate(req.params.id, dadosAtualizacao, { new: true }).select("-senha");
     if (!usuario) {
       return res.status(404).json({ sucesso: false, mensagem: "Usuário não encontrado" });
     }
