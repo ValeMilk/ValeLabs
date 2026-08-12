@@ -70,6 +70,10 @@ export function UsuariosPage() {
           nome: formData.nome,
           perfil: formData.perfil,
         };
+        // Incluir senha se foi preenchida
+        if (formData.senha.trim()) {
+          dadosAtualizacao.senha = formData.senha;
+        }
         await api.put(`/admin/usuarios/${editando._id}`, dadosAtualizacao);
       } else {
         // Criar
@@ -193,8 +197,8 @@ export function UsuariosPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] px-4">
+          <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl z-[10000]">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editando ? 'Editar Usuário' : 'Novo Usuário'}
             </h2>
