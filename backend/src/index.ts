@@ -191,7 +191,6 @@ app.post("/api/auth/seed", async (req, res) => {
       mensagem: "Usuários de teste criados",
       dados: usuariosCriados
     });
-    });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
   }
