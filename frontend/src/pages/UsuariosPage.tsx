@@ -52,6 +52,7 @@ export function UsuariosPage() {
   };
 
   const abrirEditar = (usuario: Usuario) => {
+    console.log('Abrindo editar:', usuario);
     setEditando(usuario);
     setFormData({ nome: usuario.nome, perfil: usuario.perfil, senha: '', ativo: usuario.ativo });
     setShowModal(true);
@@ -199,7 +200,15 @@ export function UsuariosPage() {
 
       {/* Modal usando Portal - renderiza fora da hierarquia */}
       {showModal && createPortal(
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
+          onClick={(e) => {
+            console.log('Clicou no overlay');
+            if (e.target === e.currentTarget) {
+              setShowModal(false);
+            }
+          }}
+        >
           <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editando ? 'Editar Usuário' : 'Novo Usuário'}
