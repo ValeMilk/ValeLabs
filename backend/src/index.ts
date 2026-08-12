@@ -59,6 +59,12 @@ const padraoSchema = new mongoose.Schema({
   criadoEm: { type: Date, default: Date.now }
 });
 
+const microrganismoSchema = new mongoose.Schema({
+  nome: { type: String, required: true, unique: true },
+  ativo: { type: Boolean, default: true },
+  criadoEm: { type: Date, default: Date.now }
+});
+
 const analiseSchema = new mongoose.Schema({
   dataInoculacao: { type: Date, required: true },
   dataPrevistaLeitura: { type: Date, required: true },
@@ -79,6 +85,7 @@ const analiseSchema = new mongoose.Schema({
 const Usuario = mongoose.model("Usuario", usuarioSchema);
 const Produto = mongoose.model("Produto", produtoSchema);
 const Padrao = mongoose.model("Padrao", padraoSchema);
+const Microrganismo = mongoose.model("Microrganismo", microrganismoSchema);
 const Analise = mongoose.model("Analise", analiseSchema);
 
 // ========== MIDDLEWARE AUTENTICAÇÃO & AUTORIZAÇÃO ==========
@@ -493,6 +500,225 @@ app.get("/api/dashboard/categorias", autenticar, async (req, res) => {
       sucesso: true,
       mensagem: "Categorias carregadas",
       dados: Array.from(categorias.values())
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// ========== MICRORGANISMO ENDPOINTS ==========
+// GET todos os microrganismos
+app.get("/api/microrganismos", autenticar, async (req, res) => {
+  try {
+    const microrganismos = await Microrganismo.find({ ativo: true });
+    res.json({
+      sucesso: true,
+      mensagem: "Microrganismos carregados",
+      dados: microrganismos
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// POST criar microrganismo
+app.post("/api/microrganismos", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome } = req.body;
+    if (!nome || !nome.trim()) {
+      return res.status(400).json({ sucesso: false, mensagem: "Nome do microrganismo é obrigatório" });
+    }
+    
+    const existe = await Microrganismo.findOne({ nome: nome.trim() });
+    if (existe) {
+      return res.status(400).json({ sucesso: false, mensagem: "Microrganismo já existe" });
+    }
+    
+    const microrganismo = new Microrganismo({ nome: nome.trim() });
+    await microrganismo.save();
+    
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Microrganismo criado",
+      dados: microrganismo
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// PUT atualizar microrganismo
+app.put("/api/microrganismos/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { nome, ativo } = req.body;
+    
+    const dadosAtualizacao: any = {};
+    if (nome !== undefined) dadosAtualizacao.nome = nome.trim();
+    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+    
+    const microrganismo = await Microrganismo.findByIdAndUpdate(
+      req.params.id,
+      dadosAtualizacao,
+      { new: true }
+    );
+    
+    if (!microrganismo) {
+      return res.status(404).json({ sucesso: false, mensagem: "Microrganismo não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Microrganismo atualizado",
+      dados: microrganismo
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// DELETE microrganismo
+app.delete("/api/microrganismos/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const microrganismo = await Microrganismo.findByIdAndDelete(req.params.id);
+    
+    if (!microrganismo) {
+      return res.status(404).json({ sucesso: false, mensagem: "Microrganismo não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Microrganismo deletado",
+      dados: { nome: microrganismo.nome }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// ========== PADRÃO ENDPOINTS ==========
+// GET padrões por categoria
+app.get("/api/padroes/:categoria", autenticar, async (req, res) => {
+  try {
+    const { categoria } = req.params;
+    const padroes = await Padrao.find({ categoria, ativo: true });
+    res.json({
+      sucesso: true,
+      mensagem: "Padrões carregados",
+      dados: padroes
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// GET todos os padrões
+app.get("/api/padroes", autenticar, async (req, res) => {
+  try {
+    const padroes = await Padrao.find({ ativo: true });
+    res.json({
+      sucesso: true,
+      mensagem: "Padrões carregados",
+      dados: padroes
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// POST criar padrão
+app.post("/api/padroes", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { categoria, microrganismo, limiteMinimo, limiteMaximo, unidade, criticidade, vigem } = req.body;
+    
+    if (!categoria || !microrganismo || limiteMinimo === undefined || limiteMaximo === undefined || !vigem) {
+      return res.status(400).json({ 
+        sucesso: false, 
+        mensagem: "Categoria, microrganismo, limites e vigência são obrigatórios" 
+      });
+    }
+    
+    // Validar se microrganismo existe
+    const micro = await Microrganismo.findById(microrganismo);
+    if (!micro) {
+      return res.status(400).json({ sucesso: false, mensagem: "Microrganismo não encontrado" });
+    }
+    
+    // Validar se já existe padrão para essa combinação
+    const existe = await Padrao.findOne({ categoria, microrganismo, ativo: true });
+    if (existe) {
+      return res.status(400).json({ 
+        sucesso: false, 
+        mensagem: "Já existe padrão para esse microrganismo nessa categoria" 
+      });
+    }
+    
+    const padrao = new Padrao({
+      categoria,
+      microrganismo,
+      limiteMinimo,
+      limiteMaximo,
+      unidade: unidade || "UFC/mL",
+      criticidade: criticidade || "CONFORME",
+      vigem: new Date(vigem)
+    });
+    
+    await padrao.save();
+    
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Padrão criado",
+      dados: padrao
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// PUT atualizar padrão
+app.put("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const { limiteMinimo, limiteMaximo, criticidade, vigem, ativo } = req.body;
+    
+    const dadosAtualizacao: any = {};
+    if (limiteMinimo !== undefined) dadosAtualizacao.limiteMinimo = limiteMinimo;
+    if (limiteMaximo !== undefined) dadosAtualizacao.limiteMaximo = limiteMaximo;
+    if (criticidade !== undefined) dadosAtualizacao.criticidade = criticidade;
+    if (vigem !== undefined) dadosAtualizacao.vigem = new Date(vigem);
+    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+    
+    const padrao = await Padrao.findByIdAndUpdate(
+      req.params.id,
+      dadosAtualizacao,
+      { new: true }
+    );
+    
+    if (!padrao) {
+      return res.status(404).json({ sucesso: false, mensagem: "Padrão não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Padrão atualizado",
+      dados: padrao
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// DELETE padrão
+app.delete("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
+  try {
+    const padrao = await Padrao.findByIdAndDelete(req.params.id);
+    
+    if (!padrao) {
+      return res.status(404).json({ sucesso: false, mensagem: "Padrão não encontrado" });
+    }
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Padrão deletado",
+      dados: { categoria: padrao.categoria, microrganismo: padrao.microrganismo }
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
