@@ -91,12 +91,12 @@ export function LancamentosPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
-          <p className="text-gray-600">Registre novas análises de laboratório</p>
-        </div>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
+            <p className="text-gray-600">Registre novas análises de laboratório</p>
+          </div>
           <button
             onClick={() => setMostraForm(!mostraForm)}
             className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -297,6 +297,5 @@ export function LancamentosPage() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

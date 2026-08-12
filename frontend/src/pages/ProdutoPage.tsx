@@ -32,14 +32,14 @@ export function ProdutoPage() {
 
   if (carregando) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-gray-500">Carregando...</div>
-      </div>
+        <div className="flex justify-center items-center h-96">
+          <div className="text-gray-500">Carregando...</div>
+        </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Produto: {produtoNome}
         </h1>
@@ -97,6 +97,5 @@ export function ProdutoPage() {
           </div>
         )}
       </div>
-    </div>
   );
 }

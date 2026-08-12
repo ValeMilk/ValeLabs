@@ -90,16 +90,16 @@ export function PadroesPage() {
 
   if (carregando) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <div className="text-gray-500">Carregando...</div>
-      </div>
+        <div className="flex justify-center items-center h-96">
+          <div className="text-gray-500">Carregando...</div>
+        </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
             <h1 className="text-3xl font-bold text-gray-900">Padrões</h1>
             <p className="text-gray-600">
               Gerencie os padrões de qualidade microbiológica
