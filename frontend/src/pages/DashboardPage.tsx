@@ -15,14 +15,14 @@ import {
 } from 'lucide-react';
 import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
 
-interface MicroorganismoData {
+interface ProdutoData {
   nome: string;
   percentualReprovacao: number;
   historico: SeriesPoint[];
-  produtos: ProdutoData[];
+  microrganismos: MicroorganismoData[];
 }
 
-interface ProdutoData {
+interface MicroorganismoData {
   nome: string;
   percentualReprovacao: number;
   historico: SeriesPoint[];
@@ -33,9 +33,9 @@ export function DashboardPage() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState<string | null>(null);
-  const [microSelecionado, setMicroSelecionado] = useState<string | null>(null);
-  const [microorganismos, setMicroorganismos] = useState<MicroorganismoData[]>([]);
-  const [produtosMicro, setProdutosMicro] = useState<ProdutoData[]>([]);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<string | null>(null);
+  const [produtos, setProdutos] = useState<ProdutoData[]>([]);
+  const [microrganismos, setMicrorganismos] = useState<MicroorganismoData[]>([]);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const navigate = useNavigate();
 
@@ -56,100 +56,21 @@ export function DashboardPage() {
     }
   };
 
-  const carregarMicroorganismos = async (categoria: string) => {
+  // Nível 2: Produtos de uma categoria
+  const carregarProdutos = async (categoria: string) => {
     try {
       setCarregandoDetalhe(true);
       setCategoriaSelecionada(categoria);
-      setMicroSelecionado(null);
+      setProdutoSelecionado(null);
       
       const response = await api.get('/analises', {
         params: { categoria }
       });
       
       const analises = response.data.dados || [];
-      const agrupadoMicro: Record<string, MicroorganismoData> = {};
-      
-      analises.forEach((analise: any) => {
-        const microNome = analise.microrganismo || 'Desconhecido';
-        if (!agrupadoMicro[microNome]) {
-          agrupadoMicro[microNome] = {
-            nome: microNome,
-            percentualReprovacao: 0,
-            historico: [],
-            produtos: [],
-          };
-        }
-      });
-      
-      // Agrupa por microrganismo e data para histórico
-      const historicoMicro: Record<string, Record<string, { total: number; reprovados: number }>> = {};
-      const produtosPorMicro: Record<string, Set<string>> = {};
-      
-      analises.forEach((analise: any) => {
-        const microNome = analise.microrganismo || 'Desconhecido';
-        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
-        const produto = analise.produto || 'Sem produto';
-        
-        if (!historicoMicro[microNome]) historicoMicro[microNome] = {};
-        if (!historicoMicro[microNome][data]) {
-          historicoMicro[microNome][data] = { total: 0, reprovados: 0 };
-        }
-        
-        historicoMicro[microNome][data].total += 1;
-        if (analise.statusConformidade === 'REPROVADO') {
-          historicoMicro[microNome][data].reprovados += 1;
-        }
-        
-        if (!produtosPorMicro[microNome]) produtosPorMicro[microNome] = new Set();
-        produtosPorMicro[microNome].add(produto);
-      });
-      
-      // Monta array de microrganismos com histórico
-      Object.keys(agrupadoMicro).forEach((microNome) => {
-        const historicoDatas = historicoMicro[microNome] || {};
-        const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
-          ([data, { reprovados, total }]) => ({
-            value: total > 0 ? (reprovados / total) * 100 : 0,
-            date: data,
-          })
-        );
-        
-        const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
-        const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
-        
-        agrupadoMicro[microNome].historico = historico.sort((a, b) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-        agrupadoMicro[microNome].percentualReprovacao = totalAnalises > 0 
-          ? (totalReprovados / totalAnalises) * 100 
-          : 0;
-        agrupadoMicro[microNome].produtos = Array.from(produtosPorMicro[microNome] || new Set()).map(p => ({
-          nome: p,
-          percentualReprovacao: 0,
-          historico: [],
-        }));
-      });
-      
-      setMicroorganismos(Object.values(agrupadoMicro));
-    } catch (err: any) {
-      setErro(err.response?.data?.mensagem || 'Erro ao carregar microrganismos');
-    } finally {
-      setCarregandoDetalhe(false);
-    }
-  };
-
-  const carregarProdutosMicro = async (categoria: string, microNome: string) => {
-    try {
-      setCarregandoDetalhe(true);
-      setMicroSelecionado(microNome);
-      
-      const response = await api.get('/analises', {
-        params: { categoria, microrganismo: microNome }
-      });
-      
-      const analises = response.data.dados || [];
       const agrupadoProduto: Record<string, ProdutoData> = {};
       
+      // Agrupa por produto
       analises.forEach((analise: any) => {
         const produtoNome = analise.produto || 'Sem produto';
         if (!agrupadoProduto[produtoNome]) {
@@ -157,16 +78,19 @@ export function DashboardPage() {
             nome: produtoNome,
             percentualReprovacao: 0,
             historico: [],
+            microrganismos: [],
           };
         }
       });
       
-      // Agrupa por produto e data
+      // Histórico por produto e data
       const historicoProduto: Record<string, Record<string, { total: number; reprovados: number }>> = {};
+      const microsPorProduto: Record<string, Set<string>> = {};
       
       analises.forEach((analise: any) => {
         const produtoNome = analise.produto || 'Sem produto';
         const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        const microNome = analise.microrganismo || 'Desconhecido';
         
         if (!historicoProduto[produtoNome]) historicoProduto[produtoNome] = {};
         if (!historicoProduto[produtoNome][data]) {
@@ -177,6 +101,9 @@ export function DashboardPage() {
         if (analise.statusConformidade === 'REPROVADO') {
           historicoProduto[produtoNome][data].reprovados += 1;
         }
+        
+        if (!microsPorProduto[produtoNome]) microsPorProduto[produtoNome] = new Set();
+        microsPorProduto[produtoNome].add(microNome);
       });
       
       Object.keys(agrupadoProduto).forEach((produtoNome) => {
@@ -197,11 +124,86 @@ export function DashboardPage() {
         agrupadoProduto[produtoNome].percentualReprovacao = totalAnalises > 0 
           ? (totalReprovados / totalAnalises) * 100 
           : 0;
+        agrupadoProduto[produtoNome].microrganismos = Array.from(microsPorProduto[produtoNome] || new Set()).map(m => ({
+          nome: m,
+          percentualReprovacao: 0,
+          historico: [],
+        }));
       });
       
-      setProdutosMicro(Object.values(agrupadoProduto));
+      setProdutos(Object.values(agrupadoProduto));
     } catch (err: any) {
       setErro(err.response?.data?.mensagem || 'Erro ao carregar produtos');
+    } finally {
+      setCarregandoDetalhe(false);
+    }
+  };
+
+  // Nível 3: Microrganismos de um produto
+  const carregarMicroorganismosProduto = async (categoria: string, produtoNome: string) => {
+    try {
+      setCarregandoDetalhe(true);
+      setProdutoSelecionado(produtoNome);
+      
+      const response = await api.get('/analises', {
+        params: { categoria, produto: produtoNome }
+      });
+      
+      const analises = response.data.dados || [];
+      const agrupadoMicro: Record<string, MicroorganismoData> = {};
+      
+      analises.forEach((analise: any) => {
+        const microNome = analise.microrganismo || 'Desconhecido';
+        if (!agrupadoMicro[microNome]) {
+          agrupadoMicro[microNome] = {
+            nome: microNome,
+            percentualReprovacao: 0,
+            historico: [],
+          };
+        }
+      });
+      
+      // Histórico por microrganismo e data
+      const historicoMicro: Record<string, Record<string, { total: number; reprovados: number }>> = {};
+      
+      analises.forEach((analise: any) => {
+        const microNome = analise.microrganismo || 'Desconhecido';
+        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        
+        if (!historicoMicro[microNome]) historicoMicro[microNome] = {};
+        if (!historicoMicro[microNome][data]) {
+          historicoMicro[microNome][data] = { total: 0, reprovados: 0 };
+        }
+        
+        historicoMicro[microNome][data].total += 1;
+        if (analise.statusConformidade === 'REPROVADO') {
+          historicoMicro[microNome][data].reprovados += 1;
+        }
+      });
+      
+      Object.keys(agrupadoMicro).forEach((microNome) => {
+        const historicoDatas = historicoMicro[microNome] || {};
+        const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
+          ([data, { reprovados, total }]) => ({
+            value: total > 0 ? (reprovados / total) * 100 : 0,
+            date: data,
+          })
+        );
+        
+        const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
+        const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
+        
+        agrupadoMicro[microNome].historico = historico.sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        agrupadoMicro[microNome].percentualReprovacao = totalAnalises > 0 
+          ? (totalReprovados / totalAnalises) * 100 
+          : 0;
+      });
+      
+      setMicrorganismos(Object.values(agrupadoMicro));
+    } catch (err: any) {
+      setErro(err.response?.data?.mensagem || 'Erro ao carregar microrganismos');
     } finally {
       setCarregandoDetalhe(false);
     }
@@ -236,17 +238,16 @@ export function DashboardPage() {
     }
   };
 
-  // Nível 2: Produtos de um microrganismo
-  if (categoriaSelecionada && microSelecionado) {
-    const categoria = categorias.find(c => c.categoria === categoriaSelecionada);
-    const micro = microorganismos.find(m => m.nome === microSelecionado);
+  // Nível 3: Microrganismos de um produto
+  if (categoriaSelecionada && produtoSelecionado) {
+    const produto = produtos.find(p => p.nome === produtoSelecionado);
     
     return (
       <div className="max-w-7xl mx-auto">
         {/* Breadcrumb + Voltar */}
         <div className="mb-6 flex items-center gap-2">
           <button
-            onClick={() => setMicroSelecionado(null)}
+            onClick={() => setProdutoSelecionado(null)}
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={18} />
@@ -260,30 +261,30 @@ export function DashboardPage() {
             {categoriaSelecionada}
           </button>
           <span className="text-gray-500">/</span>
-          <h1 className="text-2xl font-bold text-gray-800">{microSelecionado}</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{produtoSelecionado}</h1>
         </div>
 
-        {/* Cards de produtos com gráficos */}
+        {/* Cards de microrganismos com gráficos */}
         {carregandoDetalhe ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        ) : produtosMicro.length === 0 ? (
+        ) : microrganismos.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">Sem produtos para este microrganismo</p>
+            <p className="text-gray-600">Sem microrganismos para este produto</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {produtosMicro.map((produto) => (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {microrganismos.map((micro) => (
               <ProgressMetricCard
-                key={produto.nome}
-                title={produto.nome}
-                data={produto.historico}
+                key={micro.nome}
+                title={micro.nome}
+                data={micro.historico}
                 size="md"
                 accent={
-                  produto.percentualReprovacao > 50 
+                  micro.percentualReprovacao > 50 
                     ? 'rose' 
-                    : produto.percentualReprovacao > 25 
+                    : micro.percentualReprovacao > 25 
                     ? 'amber' 
                     : 'emerald'
                 }
@@ -299,7 +300,7 @@ export function DashboardPage() {
     );
   }
 
-  // Nível 1: Microrganismos de uma categoria
+  // Nível 2: Produtos de uma categoria
   if (categoriaSelecionada) {
     const categoria = categorias.find(c => c.categoria === categoriaSelecionada);
     
@@ -327,52 +328,52 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* Cards de microrganismos com gráficos */}
+        {/* Cards de produtos com gráficos */}
         {carregandoDetalhe ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        ) : microorganismos.length === 0 ? (
+        ) : produtos.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">Sem microrganismos nesta categoria</p>
+            <p className="text-gray-600">Sem produtos nesta categoria</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {microorganismos.map((micro) => (
+            {produtos.map((produto) => (
               <div
-                key={micro.nome}
-                onClick={() => carregarProdutosMicro(categoriaSelecionada, micro.nome)}
+                key={produto.nome}
+                onClick={() => carregarMicroorganismosProduto(categoriaSelecionada, produto.nome)}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-600 p-5"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{micro.nome}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800">{produto.nome}</h3>
                     <p className="text-sm text-gray-600">
-                      {micro.produtos.length} produto(s) | Taxa de reprovação: {micro.percentualReprovacao.toFixed(1)}%
+                      {produto.microrganismos.length} microrganismo(s) | Taxa de reprovação: {produto.percentualReprovacao.toFixed(1)}%
                     </p>
                   </div>
                   <div className={`px-3 py-1 rounded-full font-bold text-sm ${
-                    micro.percentualReprovacao > 50 
+                    produto.percentualReprovacao > 50 
                       ? 'bg-red-100 text-red-700' 
-                      : micro.percentualReprovacao > 25 
+                      : produto.percentualReprovacao > 25 
                       ? 'bg-yellow-100 text-yellow-700' 
                       : 'bg-green-100 text-green-700'
                   }`}>
-                    {micro.percentualReprovacao.toFixed(1)}%
+                    {produto.percentualReprovacao.toFixed(1)}%
                   </div>
                 </div>
 
                 {/* Mini gráfico inline */}
-                {micro.historico.length >= 2 && (
+                {produto.historico.length >= 2 && (
                   <div className="mb-4 h-12">
                     <ProgressMetricCard
                       title=""
-                      data={micro.historico}
+                      data={produto.historico}
                       size="sm"
                       accent={
-                        micro.percentualReprovacao > 50 
+                        produto.percentualReprovacao > 50 
                           ? 'rose' 
-                          : micro.percentualReprovacao > 25 
+                          : produto.percentualReprovacao > 25 
                           ? 'amber' 
                           : 'emerald'
                       }
@@ -384,11 +385,11 @@ export function DashboardPage() {
                   </div>
                 )}
 
-                {/* Lista de produtos */}
+                {/* Lista de microrganismos */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {micro.produtos.map((prod) => (
-                    <div key={prod.nome} className="bg-gray-50 rounded p-2 text-sm">
-                      <p className="font-medium text-gray-800">{prod.nome}</p>
+                  {produto.microrganismos.map((micro) => (
+                    <div key={micro.nome} className="bg-gray-50 rounded p-2 text-sm">
+                      <p className="font-medium text-gray-800">{micro.nome}</p>
                       <p className="text-xs text-gray-600">Clique para detalhes</p>
                     </div>
                   ))}
@@ -561,7 +562,7 @@ export function DashboardPage() {
               return (
                 <div
                   key={cat.categoria}
-                  onClick={() => carregarMicroorganismos(cat.categoria)}
+                  onClick={() => carregarProdutos(cat.categoria)}
                   className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border-l-4 ${style.border} cursor-pointer`}
                 >
                   <div className="flex items-start justify-between mb-3">
