@@ -1,41 +1,49 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
-import { Plus } from 'lucide-react';
+import { Plus, X, Check } from 'lucide-react';
+
+interface Padrao {
+  _id: string;
+  categoria: string;
+  microrganismo: string;
+  limiteMinimo: number;
+  limiteMaximo: number;
+  unidade: string;
+}
+
+interface NovaAnaliseInline {
+  categoria: string;
+  produto: string;
+  microrganismo: string;
+  ponto: string;
+  padraominimo: number | '';
+  padraomaximo: number | '';
+  resultado: string;
+  status: 'APROVADO' | 'REPROVADO' | '';
+}
 
 export function LancamentosPage() {
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [padroes, setPadroes] = useState<Padrao[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [mostraForm, setMostraForm] = useState(false);
   const [erro, setErro] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [mostraNovaLinha, setMostraNovaLinha] = useState(false);
 
-  const [form, setForm] = useState<CriarAnaliseRequest>({
-    dataInoculacao: new Date().toISOString().split('T')[0],
-    dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split('T')[0],
-    produtoId: '',
+  const [novaAnalise, setNovaAnalise] = useState<NovaAnaliseInline>({
     categoria: '',
-    pontoColeta: '',
+    produto: '',
     microrganismo: '',
+    ponto: '',
+    padraominimo: '',
+    padraomaximo: '',
+    resultado: '',
+    status: '',
   });
 
-  const categorias = [
-    'Leite Cru',
-    'Leite Pasteurizado',
-    'Leite UHT',
-    'Iogurte',
-    'Queijo',
-  ];
-  const microrganismos = [
-    'E. coli',
-    'Salmonella',
-    'Listeria',
-    'Staphylococcus',
-    'Coliformes',
-  ];
+  const pontosColeta = ['Único', 'Início', 'Meio', 'Fim', 'Base'];
 
   useEffect(() => {
     carregarDados();
@@ -44,12 +52,15 @@ export function LancamentosPage() {
   const carregarDados = async () => {
     try {
       setCarregando(true);
-      const [resAnalises, resProdutos] = await Promise.all([
+      const [resAnalises, resProdutos, resPadroes] = await Promise.all([
         api.get('/análises?limite=50'),
         api.get('/produtos'),
+        api.get('/padroes'),
       ]);
       setAnalises(resAnalises.data.dados?.dados || []);
       setProdutos(resProdutos.data.dados || []);
+      setPadroes(resPadroes.data.dados || []);
+      setErro('');
     } catch (err: any) {
       setErro(err.response?.data?.mensagem || 'Erro ao carregar dados');
     } finally {
@@ -57,29 +68,169 @@ export function LancamentosPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErro('');
-    setMensagem('');
+  // Obter categorias únicas dos padrões
+  const categorias = Array.from(
+    new Set(padroes.map((p) => p.categoria))
+  ).sort();
+
+  // Filtrar produtos por categoria selecionada
+  const produtosFiltrados = novaAnalise.categoria
+    ? produtos.filter((p) => p.categoria === novaAnalise.categoria)
+    : [];
+
+  // Filtrar microrganismos por categoria selecionada
+  const microrganismosFiltrados = novaAnalise.categoria
+    ? Array.from(
+        new Set(
+          padroes
+            .filter((p) => p.categoria === novaAnalise.categoria)
+            .map((p) => p.microrganismo)
+        )
+      ).sort()
+    : [];
+
+  // Encontrar padrão quando categoria e microrganismo são selecionados
+  const buscarPadrao = (categoria: string, microrganismo: string) => {
+    const padrao = padroes.find(
+      (p) => p.categoria === categoria && p.microrganismo === microrganismo
+    );
+    if (padrao) {
+      setNovaAnalise((prev) => ({
+        ...prev,
+        padraominimo: padrao.limiteMinimo,
+        padraomaximo: padrao.limiteMaximo,
+      }));
+    } else {
+      setNovaAnalise((prev) => ({
+        ...prev,
+        padraominimo: '',
+        padraomaximo: '',
+      }));
+    }
+  };
+
+  // Calcular status automaticamente
+  const calcularStatus = (resultado: string, min: number | '', max: number | ''): 'APROVADO' | 'REPROVADO' | '' => {
+    if (!resultado || min === '' || max === '') return '';
+
+    const res = parseFloat(resultado);
+    if (isNaN(res)) return '';
+
+    if (res >= (min as number) && res <= (max as number)) {
+      return 'APROVADO';
+    } else {
+      return 'REPROVADO';
+    }
+  };
+
+  const handleCategoriaChange = (categoria: string) => {
+    setNovaAnalise({
+      ...novaAnalise,
+      categoria,
+      produto: '',
+      microrganismo: '',
+      padraominimo: '',
+      padraomaximo: '',
+      resultado: '',
+      status: '',
+    });
+  };
+
+  const handleProdutoChange = (produto: string) => {
+    setNovaAnalise((prev) => ({
+      ...prev,
+      produto,
+    }));
+  };
+
+  const handleMicrorganismoChange = (microrganismo: string) => {
+    buscarPadrao(novaAnalise.categoria, microrganismo);
+    setNovaAnalise((prev) => ({
+      ...prev,
+      microrganismo,
+      resultado: '',
+      status: '',
+    }));
+  };
+
+  const handlePontoChange = (ponto: string) => {
+    setNovaAnalise((prev) => ({
+      ...prev,
+      ponto,
+    }));
+  };
+
+  const handleResultadoChange = (resultado: string) => {
+    const novoStatus = calcularStatus(
+      resultado,
+      novaAnalise.padraominimo,
+      novaAnalise.padraomaximo
+    );
+    setNovaAnalise((prev) => ({
+      ...prev,
+      resultado,
+      status: novoStatus,
+    }));
+  };
+
+  const salvarNovaAnalise = async () => {
+    if (
+      !novaAnalise.categoria ||
+      !novaAnalise.produto ||
+      !novaAnalise.microrganismo ||
+      !novaAnalise.ponto ||
+      !novaAnalise.resultado
+    ) {
+      setErro('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const payload = {
+      produtoId: novaAnalise.produto,
+      categoria: novaAnalise.categoria,
+      microrganismo: novaAnalise.microrganismo,
+      pontoColeta: novaAnalise.ponto,
+      resultado: novaAnalise.resultado,
+      statusConformidade: novaAnalise.status,
+      dataInoculacao: new Date().toISOString(),
+      dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
 
     try {
-      await api.post('/análises', form);
+      await api.post('/análises', payload);
       setMensagem('Análise lançada com sucesso!');
-      setForm({
-        dataInoculacao: new Date().toISOString().split('T')[0],
-        dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
-        produtoId: '',
+      setNovaAnalise({
         categoria: '',
-        pontoColeta: '',
+        produto: '',
         microrganismo: '',
+        ponto: '',
+        padraominimo: '',
+        padraomaximo: '',
+        resultado: '',
+        status: '',
       });
-      setMostraForm(false);
-      carregarDados();
+      setMostraNovaLinha(false);
+      setErro('');
+      await carregarDados();
+      setTimeout(() => setMensagem(''), 3000);
     } catch (err: any) {
       setErro(err.response?.data?.mensagem || 'Erro ao lançar análise');
     }
+  };
+
+  const cancelarNovaAnalise = () => {
+    setNovaAnalise({
+      categoria: '',
+      produto: '',
+      microrganismo: '',
+      ponto: '',
+      padraominimo: '',
+      padraomaximo: '',
+      resultado: '',
+      status: '',
+    });
+    setMostraNovaLinha(false);
+    setErro('');
   };
 
   if (carregando) {
@@ -91,211 +242,249 @@ export function LancamentosPage() {
   }
 
   return (
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
-            <p className="text-gray-600">Registre novas análises de laboratório</p>
-          </div>
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
+          <p className="text-gray-600">Registre novas análises de laboratório</p>
+        </div>
+        {!mostraNovaLinha && (
           <button
-            onClick={() => setMostraForm(!mostraForm)}
+            onClick={() => setMostraNovaLinha(true)}
             className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Plus size={20} />
             <span>Nova Análise</span>
           </button>
+        )}
+      </div>
+
+      {erro && (
+        <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">{erro}</div>
+      )}
+
+      {mensagem && (
+        <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg">
+          {mensagem}
         </div>
+      )}
 
-        {erro && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">{erro}</div>
-        )}
-
-        {mensagem && (
-          <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-lg">
-            {mensagem}
-          </div>
-        )}
-
-        {/* Formulário */}
-        {mostraForm && (
-          <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">
-              Nova Análise
-            </h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data de Inoculação
-                </label>
-                <input
-                  type="date"
-                  value={form.dataInoculacao}
-                  onChange={(e) =>
-                    setForm({ ...form, dataInoculacao: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data Prevista de Leitura
-                </label>
-                <input
-                  type="date"
-                  value={form.dataPrevistaLeitura}
-                  onChange={(e) =>
-                    setForm({ ...form, dataPrevistaLeitura: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Produto
-                </label>
-                <select
-                  value={form.produtoId}
-                  onChange={(e) =>
-                    setForm({ ...form, produtoId: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                >
-                  <option value="">Selecione um produto</option>
-                  {produtos.map((p) => (
-                    <option key={p._id} value={p._id!}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+      {/* Tabela */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-100 border-b">
+              <tr>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Categoria
-                </label>
-                <select
-                  value={form.categoria}
-                  onChange={(e) =>
-                    setForm({ ...form, categoria: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                >
-                  <option value="">Selecione uma categoria</option>
-                  {categorias.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ponto de Coleta
-                </label>
-                <input
-                  type="text"
-                  value={form.pontoColeta}
-                  onChange={(e) =>
-                    setForm({ ...form, pontoColeta: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Produto
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Microrganismo
-                </label>
-                <select
-                  value={form.microrganismo}
-                  onChange={(e) =>
-                    setForm({ ...form, microrganismo: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  required
-                >
-                  <option value="">Selecione um microrganismo</option>
-                  {microrganismos.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Ponto
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Padrão Mín.
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Padrão Máx.
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Resultado
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {/* Linha de Nova Análise */}
+              {mostraNovaLinha && (
+                <tr className="bg-blue-50 hover:bg-blue-100">
+                  {/* Categoria */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={novaAnalise.categoria}
+                      onChange={(e) => handleCategoriaChange(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Selecionar</option>
+                      {categorias.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
 
-              <div className="col-span-2 flex gap-4">
-                <button
-                  type="submit"
-                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-                >
-                  Lançar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMostraForm(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-400 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+                  {/* Produto */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={novaAnalise.produto}
+                      onChange={(e) => handleProdutoChange(e.target.value)}
+                      disabled={!novaAnalise.categoria}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">Selecionar</option>
+                      {produtosFiltrados.map((prod) => (
+                        <option key={prod._id} value={prod._id}>
+                          {prod.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
 
-        {/* Lista de análises */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900">
-            Últimas Análises
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 border-b">
-                <tr>
-                  <th className="text-left p-3">Produto</th>
-                  <th className="text-left p-3">Categoria</th>
-                  <th className="text-left p-3">Microrganismo</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Data Inoculação</th>
+                  {/* Microrganismo */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={novaAnalise.microrganismo}
+                      onChange={(e) => handleMicrorganismoChange(e.target.value)}
+                      disabled={!novaAnalise.categoria}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">Selecionar</option>
+                      {microrganismosFiltrados.map((micro) => (
+                        <option key={micro} value={micro}>
+                          {micro}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+
+                  {/* Ponto de Coleta */}
+                  <td className="px-4 py-3">
+                    <select
+                      value={novaAnalise.ponto}
+                      onChange={(e) => handlePontoChange(e.target.value)}
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    >
+                      <option value="">Selecionar</option>
+                      {pontosColeta.map((ponto) => (
+                        <option key={ponto} value={ponto}>
+                          {ponto}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+
+                  {/* Padrão Mínimo (automático) */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={novaAnalise.padraominimo}
+                      disabled
+                      className="w-full px-2 py-1 border border-gray-300 rounded bg-gray-100 text-gray-700 font-semibold"
+                    />
+                  </td>
+
+                  {/* Padrão Máximo (automático) */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={novaAnalise.padraomaximo}
+                      disabled
+                      className="w-full px-2 py-1 border border-gray-300 rounded bg-gray-100 text-gray-700 font-semibold"
+                    />
+                  </td>
+
+                  {/* Resultado */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={novaAnalise.resultado}
+                      onChange={(e) => handleResultadoChange(e.target.value)}
+                      placeholder="Digite o resultado"
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  </td>
+
+                  {/* Status (automático) */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        novaAnalise.status === 'APROVADO'
+                          ? 'bg-green-100 text-green-800'
+                          : novaAnalise.status === 'REPROVADO'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {novaAnalise.status || '-'}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {analises.map((analise) => (
-                  <tr key={analise._id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{analise.produtoId}</td>
-                    <td className="p-3">{analise.categoria}</td>
-                    <td className="p-3">{analise.microrganismo}</td>
-                    <td className="p-3">
+              )}
+
+              {/* Linha de Ações */}
+              {mostraNovaLinha && (
+                <tr className="bg-blue-50 border-t-2 border-indigo-300">
+                  <td colSpan={8} className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={salvarNovaAnalise}
+                        className="flex items-center space-x-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                      >
+                        <Check size={16} />
+                        <span>Salvar</span>
+                      </button>
+                      <button
+                        onClick={cancelarNovaAnalise}
+                        className="flex items-center space-x-1 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition-colors"
+                      >
+                        <X size={16} />
+                        <span>Cancelar</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {/* Análises existentes */}
+              {analises.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                    Nenhuma análise registrada
+                  </td>
+                </tr>
+              ) : (
+                analises.map((analise) => (
+                  <tr key={analise._id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm">{analise.categoria}</td>
+                    <td className="px-4 py-3 text-sm">{analise.produtoId}</td>
+                    <td className="px-4 py-3 text-sm">{analise.microrganismo}</td>
+                    <td className="px-4 py-3 text-sm">{analise.pontoColeta || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">-</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">-</td>
+                    <td className="px-4 py-3 text-sm">{analise.resultado || '-'}</td>
+                    <td className="px-4 py-3 text-sm">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           analise.statusConformidade === 'APROVADO'
-                            ? 'bg-green-100 text-green-700'
+                            ? 'bg-green-100 text-green-800'
                             : analise.statusConformidade === 'REPROVADO'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-yellow-100 text-yellow-700'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
                         {analise.statusConformidade}
                       </span>
                     </td>
-                    <td className="p-3">
-                      {new Date(analise.dataInoculacao).toLocaleDateString(
-                        'pt-BR'
-                      )}
-                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
   );
 }
