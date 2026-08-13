@@ -152,12 +152,17 @@ export function DashboardPage() {
       });
       
       const todasAsAnalises = response.data.dados || [];
+      console.log('📊 Nível 3 - Todas as análises da categoria:', todasAsAnalises.length);
+      
       // Filtrar apenas as análises do produto selecionado
       // Compatível com dados antigos (produtoId) e novos (produtoNome)
       const produtoAtual = produtos.find(p => p.nome === produtoNome);
       const analises = todasAsAnalises.filter((a: any) => 
         a.produtoNome === produtoNome || a.produtoId === produtoAtual?.produtoId
       );
+      console.log('📊 Nível 3 - Análises filtradas para produto:', analises.length, { produtoNome, produtoAtual });
+      console.log('📊 Nível 3 - Amostra de análises:', analises.slice(0, 3));
+      
       const agrupadoMicro: Record<string, MicroorganismoData> = {};
       
       analises.forEach((analise: any) => {
@@ -170,6 +175,8 @@ export function DashboardPage() {
           };
         }
       });
+      
+      console.log('📊 Nível 3 - Microrganismos encontrados:', Object.keys(agrupadoMicro));
       
       // Histórico por microrganismo e data
       const historicoMicro: Record<string, Record<string, { total: number; reprovados: number }>> = {};
@@ -189,6 +196,8 @@ export function DashboardPage() {
         }
       });
       
+      console.log('📊 Nível 3 - Histórico por micro:', historicoMicro);
+      
       Object.keys(agrupadoMicro).forEach((microNome) => {
         const historicoDatas = historicoMicro[microNome] || {};
         const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
@@ -207,10 +216,13 @@ export function DashboardPage() {
         agrupadoMicro[microNome].percentualReprovacao = totalAnalises > 0 
           ? (totalReprovados / totalAnalises) * 100 
           : 0;
+        
+        console.log(`📊 Nível 3 - ${microNome}: ${agrupadoMicro[microNome].historico.length} pontos, ${agrupadoMicro[microNome].percentualReprovacao.toFixed(1)}% reprovação`);
       });
       
       setMicrorganismos(Object.values(agrupadoMicro));
     } catch (err: any) {
+      console.error('❌ Erro ao carregar microrganismos:', err);
       setErro(err.response?.data?.mensagem || 'Erro ao carregar microrganismos');
     } finally {
       setCarregandoDetalhe(false);
@@ -396,7 +408,11 @@ export function DashboardPage() {
                 {/* Lista de microrganismos */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {produto.microrganismos.map((micro) => (
-                    <div key={micro.nome} className="bg-gray-50 rounded p-2 text-sm">
+                    <div 
+                      key={micro.nome} 
+                      onClick={() => carregarMicroorganismosProduto(categoriaSelecionada!, produto.nome)}
+                      className="bg-gray-50 hover:bg-blue-50 rounded p-2 text-sm cursor-pointer transition-colors"
+                    >
                       <p className="font-medium text-gray-800">{micro.nome}</p>
                       <p className="text-xs text-gray-600">Clique para detalhes</p>
                     </div>
