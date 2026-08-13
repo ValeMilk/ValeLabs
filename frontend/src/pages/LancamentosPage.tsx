@@ -53,7 +53,7 @@ export function LancamentosPage() {
     try {
       setCarregando(true);
       const [resAnalises, resProdutos, resPadroes] = await Promise.all([
-        api.get('/análises?limite=50'),
+        api.get('/analises?limite=50'),
         api.get('/produtos'),
         api.get('/padroes'),
       ]);
@@ -202,7 +202,7 @@ export function LancamentosPage() {
     };
 
     try {
-      await api.post('/análises', payload);
+      await api.post('/analises', payload);
       setMensagem('Análise lançada com sucesso!');
       setNovaAnalise({
         categoria: '',

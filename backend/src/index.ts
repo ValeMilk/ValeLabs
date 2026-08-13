@@ -921,7 +921,7 @@ app.delete("/api/produtos/:id", autenticar, autorizarQualidade, async (req, res)
 
 // ========== ENDPOINTS ANÁLISES ==========
 
-app.get("/api/análises", autenticar, async (req, res) => {
+app.get("/api/analises", autenticar, async (req, res) => {
   try {
     const limite = parseInt(req.query.limite as string) || 50;
     const pagina = parseInt(req.query.pagina as string) || 1;
@@ -949,7 +949,7 @@ app.get("/api/análises", autenticar, async (req, res) => {
   }
 });
 
-app.post("/api/análises", autenticar, async (req, res) => {
+app.post("/api/analises", autenticar, async (req, res) => {
   try {
     const { categoria, produto, microrganismo, pontoColeta, resultado, dataInoculacao, dataPrevistaLeitura } = req.body;
 
