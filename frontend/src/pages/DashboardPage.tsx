@@ -11,12 +11,25 @@ import {
   Clock,
   RefreshCw,
   Beaker,
+  ArrowLeft,
 } from 'lucide-react';
+import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
+
+interface AnaliseData {
+  data: string;
+  total: number;
+  aprovados: number;
+  reprovados: number;
+  pendentes: number;
+}
 
 export function DashboardPage() {
   const [categorias, setCategorias] = useState<DashboardCategoria[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
+  const [viewDetalhe, setViewDetalhe] = useState<string | null>(null);
+  const [analisesDetalhe, setAnalisesDetalhe] = useState<AnaliseData[]>([]);
+  const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,6 +46,50 @@ export function DashboardPage() {
       setErro(err.response?.data?.mensagem || 'Erro ao carregar categorias');
     } finally {
       setCarregando(false);
+    }
+  };
+
+  const carregarAnalisesDetalhe = async (categoria: string) => {
+    try {
+      setCarregandoDetalhe(true);
+      setViewDetalhe(categoria);
+      // Busca análises da categoria
+      const response = await api.get('/analises', {
+        params: { categoria }
+      });
+      
+      // Agrupa análises por data
+      const analises = response.data.dados || [];
+      const agrupadoPorData: Record<string, AnaliseData> = {};
+      
+      analises.forEach((analise: any) => {
+        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        if (!agrupadoPorData[data]) {
+          agrupadoPorData[data] = {
+            data,
+            total: 0,
+            aprovados: 0,
+            reprovados: 0,
+            pendentes: 0,
+          };
+        }
+        agrupadoPorData[data].total += 1;
+        if (analise.statusConformidade === 'APROVADO') {
+          agrupadoPorData[data].aprovados += 1;
+        } else if (analise.statusConformidade === 'REPROVADO') {
+          agrupadoPorData[data].reprovados += 1;
+        } else {
+          agrupadoPorData[data].pendentes += 1;
+        }
+      });
+      
+      setAnalisesDetalhe(Object.values(agrupadoPorData).sort((a, b) => 
+        new Date(a.data).getTime() - new Date(b.data).getTime()
+      ));
+    } catch (err: any) {
+      setErro(err.response?.data?.mensagem || 'Erro ao carregar detalhe');
+    } finally {
+      setCarregandoDetalhe(false);
     }
   };
 
@@ -64,6 +121,87 @@ export function DashboardPage() {
         };
     }
   };
+
+  // Visão detalhe: gráfico de linha temporal da categoria
+  if (viewDetalhe) {
+    const categoria = categorias.find(c => c.categoria === viewDetalhe);
+    
+    // Prepara dados para ProgressMetricCard
+    const totalSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
+      value: d.total,
+      date: d.data,
+    }));
+    
+    const aprovadosSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
+      value: d.aprovados,
+      date: d.data,
+    }));
+    
+    const reprovadosSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
+      value: d.reprovados,
+      date: d.data,
+    }));
+
+    return (
+      <div className="max-w-7xl mx-auto">
+        {/* Botão voltar */}
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            onClick={() => setViewDetalhe(null)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Voltar
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">{viewDetalhe}</h1>
+          {categoria && (
+            <div className="ml-auto flex gap-2">
+              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                ✓ {categoria.aprovadas} aprovadas
+              </div>
+              <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                ✗ {categoria.reprovadas} reprovadas
+              </div>
+              <div className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                ⏳ {categoria.aguardandoLeitura} aguardando
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Cards de métrica */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <ProgressMetricCard
+            title="Total de Análises"
+            data={totalSeriesData}
+            size="md"
+            accent="blue"
+            loading={carregandoDetalhe}
+            valueFormatter={(v) => Math.round(v).toString()}
+            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+          />
+          <ProgressMetricCard
+            title="Análises Aprovadas"
+            data={aprovadosSeriesData}
+            size="md"
+            accent="emerald"
+            loading={carregandoDetalhe}
+            valueFormatter={(v) => Math.round(v).toString()}
+            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+          />
+          <ProgressMetricCard
+            title="Análises Reprovadas"
+            data={reprovadosSeriesData}
+            size="md"
+            accent="rose"
+            loading={carregandoDetalhe}
+            valueFormatter={(v) => Math.round(v).toString()}
+            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (carregando) {
     return (
@@ -225,9 +363,7 @@ export function DashboardPage() {
               return (
                 <div
                   key={cat.categoria}
-                  onClick={() =>
-                    navigate(`/categorias/${encodeURIComponent(cat.categoria)}`)
-                  }
+                  onClick={() => carregarAnalisesDetalhe(cat.categoria)}
                   className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border-l-4 ${style.border} cursor-pointer`}
                 >
                   <div className="flex items-start justify-between mb-3">
