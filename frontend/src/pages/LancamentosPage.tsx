@@ -114,6 +114,12 @@ export function LancamentosPage() {
     }
   };
 
+  // Função para obter nome do produto pelo ID
+  const getNomeProduto = (produtoId: string): string => {
+    const produto = produtos.find((p) => p._id === produtoId);
+    return produto?.nome || produtoId;
+  };
+
   // Calcular status automaticamente
   const calcularStatus = (resultado: string, min: number | '', max: number | ''): 'APROVADO' | 'REPROVADO' | '' => {
     if (!resultado || min === '' || max === '') return '';
@@ -489,7 +495,7 @@ export function LancamentosPage() {
                 analises.map((analise) => (
                   <tr key={analise._id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{analise.categoria}</td>
-                    <td className="px-4 py-3 text-sm">{analise.produtoId}</td>
+                    <td className="px-4 py-3 text-sm">{getNomeProduto(analise.produtoId)}</td>
                     <td className="px-4 py-3 text-sm">{analise.microrganismo}</td>
                     <td className="px-4 py-3 text-sm">{analise.pontoColeta || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500">-</td>

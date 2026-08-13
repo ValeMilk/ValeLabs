@@ -957,6 +957,19 @@ app.post("/api/analises", autenticar, async (req, res) => {
       return res.status(400).json({ sucesso: false, mensagem: "Campos obrigatórios faltando" });
     }
 
+    // Buscar o padrão para calcular status correto
+    const padrao = await Padrao.findOne({ categoria, microrganismo, ativo: true });
+    
+    let statusConformidade = "PENDENTE";
+    if (padrao && resultado !== null && resultado !== undefined) {
+      const res_num = parseFloat(resultado);
+      if (res_num >= padrao.limiteMinimo && res_num <= padrao.limiteMaximo) {
+        statusConformidade = "APROVADO";
+      } else {
+        statusConformidade = "REPROVADO";
+      }
+    }
+
     const analise = new Analise({
       dataInoculacao: dataInoculacao ? new Date(dataInoculacao) : new Date(),
       dataPrevistaLeitura: dataPrevistaLeitura ? new Date(dataPrevistaLeitura) : new Date(),
@@ -966,7 +979,7 @@ app.post("/api/analises", autenticar, async (req, res) => {
       microrganismo,
       resultado: resultado ? parseFloat(resultado) : null,
       statusCiclo: "inoculada",
-      statusConformidade: "PENDENTE",
+      statusConformidade: statusConformidade,
       criadoPor: (req as any).usuario?.nome || "Sistema"
     });
 
