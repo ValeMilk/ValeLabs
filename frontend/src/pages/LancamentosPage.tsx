@@ -195,8 +195,7 @@ export function LancamentosPage() {
       categoria: novaAnalise.categoria,
       microrganismo: novaAnalise.microrganismo,
       pontoColeta: novaAnalise.ponto,
-      resultado: novaAnalise.resultado,
-      statusConformidade: novaAnalise.status,
+      resultado: novaAnalise.resultado ? parseFloat(novaAnalise.resultado) : null,
       dataInoculacao: new Date().toISOString(),
       dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };

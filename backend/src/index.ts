@@ -964,7 +964,7 @@ app.post("/api/analises", autenticar, async (req, res) => {
       categoria,
       pontoColeta,
       microrganismo,
-      resultado: resultado || null,
+      resultado: resultado ? parseFloat(resultado) : null,
       statusCiclo: "inoculada",
       statusConformidade: "PENDENTE",
       criadoPor: (req as any).usuario?.nome || "Sistema"
@@ -976,6 +976,42 @@ app.post("/api/analises", autenticar, async (req, res) => {
       sucesso: true,
       dados: analise
     });
+  } catch (erro: any) {
+    return res.status(500).json({ sucesso: false, erro: erro.message });
+  }
+});
+
+// PATCH atualizar análise
+app.patch("/api/analises/:id", autenticar, async (req, res) => {
+  try {
+    const { resultado } = req.body;
+    
+    const analise = await Analise.findByIdAndUpdate(
+      req.params.id,
+      { resultado: resultado ? parseFloat(resultado) : null },
+      { new: true }
+    );
+
+    if (!analise) {
+      return res.status(404).json({ sucesso: false, mensagem: "Análise não encontrada" });
+    }
+
+    return res.json({ sucesso: true, dados: analise });
+  } catch (erro: any) {
+    return res.status(500).json({ sucesso: false, erro: erro.message });
+  }
+});
+
+// DELETE deletar análise
+app.delete("/api/analises/:id", autenticar, async (req, res) => {
+  try {
+    const analise = await Analise.findByIdAndDelete(req.params.id);
+
+    if (!analise) {
+      return res.status(404).json({ sucesso: false, mensagem: "Análise não encontrada" });
+    }
+
+    return res.json({ sucesso: true, mensagem: "Análise deletada" });
   } catch (erro: any) {
     return res.status(500).json({ sucesso: false, erro: erro.message });
   }
