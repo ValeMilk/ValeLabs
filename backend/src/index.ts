@@ -725,8 +725,8 @@ app.post("/api/padroes", autenticar, autorizarQualidade, async (req, res) => {
     // Registrar auditoria
     await registrarAuditoriaPadrao(
       padrao._id.toString(),
-      (req.usuario as any).id,
-      (req.usuario as any).nome,
+      (req as any).usuario.id,
+      (req as any).usuario.nome,
       "criar",
       { categoria, microrganismo, limiteMinimo, limiteMaximo, unidade, vigem },
       undefined,
@@ -777,8 +777,8 @@ app.put("/api/padroes/:id", autenticar, autorizarQualidade, async (req, res) => 
     
     await registrarAuditoriaPadrao(
       req.params.id,
-      (req.usuario as any).id,
-      (req.usuario as any).nome,
+      (req as any).usuario.id,
+      (req as any).usuario.nome,
       "editar",
       dadosAtualizacao,
       padraoAnterior.toObject(),
@@ -807,8 +807,8 @@ app.delete("/api/padroes/:id", autenticar, autorizarQualidade, async (req, res) 
     // Registrar auditoria
     await registrarAuditoriaPadrao(
       req.params.id,
-      (req.usuario as any).id,
-      (req.usuario as any).nome,
+      (req as any).usuario.id,
+      (req as any).usuario.nome,
       "deletar",
       { categoria: padrao.categoria, microrganismo: padrao.microrganismo },
       padrao.toObject(),
