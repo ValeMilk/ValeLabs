@@ -237,7 +237,8 @@ export function LancamentosPage() {
     setErro('');
   };
 
-  const handleDeletarAnalise = (id: string) => {
+  const handleDeletarAnalise = (id: string | undefined) => {
+    if (!id) return;
     if (!confirm('Tem certeza que deseja deletar esta análise?')) return;
     
     api.delete(`/analises/${id}`)
