@@ -981,12 +981,6 @@ app.post("/api/análises", autenticar, async (req, res) => {
   }
 });
 
-// ========== ERROR HANDLER ==========
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error("Erro:", err);
-  res.status(500).json({ sucesso: false, mensagem: err.message || "Erro interno" });
-});
-
 // ========== AUDITORIA - GET LOGS ==========
 app.get("/api/auditoria/padroes", autenticar, autorizarQualidade, async (req, res) => {
   try {
@@ -1020,6 +1014,12 @@ app.get("/api/auditoria/padroes/:padraoId", autenticar, autorizarQualidade, asyn
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
   }
+});
+
+// ========== ERROR HANDLER ==========
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("Erro:", err);
+  res.status(500).json({ sucesso: false, mensagem: err.message || "Erro interno" });
 });
 
 // ========== START SERVER ==========
