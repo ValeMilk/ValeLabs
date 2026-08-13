@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
-import { Plus, X, Check } from 'lucide-react';
+import { Plus, X, Check, Trash2, Edit2 } from 'lucide-react';
 
 interface Padrao {
   _id: string;
@@ -237,6 +237,20 @@ export function LancamentosPage() {
     setErro('');
   };
 
+  const handleDeletarAnalise = (id: string) => {
+    if (!confirm('Tem certeza que deseja deletar esta análise?')) return;
+    
+    api.delete(`/analises/${id}`)
+      .then(() => {
+        setMensagem('Análise deletada com sucesso!');
+        carregarDados();
+        setTimeout(() => setMensagem(''), 3000);
+      })
+      .catch((err) => {
+        setErro(err.response?.data?.mensagem || 'Erro ao deletar análise');
+      });
+  };
+
   if (carregando) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -308,6 +322,9 @@ export function LancamentosPage() {
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Status
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Ações
                 </th>
               </tr>
             </thead>
@@ -431,13 +448,15 @@ export function LancamentosPage() {
                       {novaAnalise.status || '-'}
                     </span>
                   </td>
+
+                  <td></td>
                 </tr>
               )}
 
               {/* Linha de Ações */}
               {mostraNovaLinha && (
                 <tr className="bg-blue-50 border-t-2 border-indigo-300">
-                  <td colSpan={8} className="px-4 py-3">
+                  <td colSpan={9} className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={salvarNovaAnalise}
@@ -461,7 +480,7 @@ export function LancamentosPage() {
               {/* Análises existentes */}
               {analises.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                     Nenhuma análise registrada
                   </td>
                 </tr>
@@ -487,6 +506,26 @@ export function LancamentosPage() {
                       >
                         {analise.statusConformidade}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => alert('Editar: ' + analise._id)}
+                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                          title="Editar análise"
+                        >
+                          <Edit2 size={14} />
+                          <span className="text-xs">Editar</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeletarAnalise(analise._id)}
+                          className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                          title="Deletar análise"
+                        >
+                          <Trash2 size={14} />
+                          <span className="text-xs">Deletar</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
