@@ -191,7 +191,7 @@ export function LancamentosPage() {
     }
 
     const payload = {
-      produtoId: novaAnalise.produto,
+      produto: novaAnalise.produto,
       categoria: novaAnalise.categoria,
       microrganismo: novaAnalise.microrganismo,
       pontoColeta: novaAnalise.ponto,
