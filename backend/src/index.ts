@@ -70,6 +70,7 @@ const analiseSchema = new mongoose.Schema({
   dataPrevistaLeitura: { type: Date, required: true },
   dataRealLeitura: { type: Date, default: null },
   produtoId: { type: String, required: true },
+  produtoNome: { type: String, default: "" },
   categoria: { type: String, required: true },
   pontoColeta: { type: String, default: "" },
   microrganismo: { type: String, required: true },
@@ -960,6 +961,10 @@ app.post("/api/analises", autenticar, async (req, res) => {
     // Buscar o padrão para calcular status correto
     const padrao = await Padrao.findOne({ categoria, microrganismo, ativo: true });
     
+    // Buscar nome do produto
+    const produtoDoc = await Produto.findById(produto);
+    const produtoNome = produtoDoc?.nome || produto;
+    
     let statusConformidade = "PENDENTE";
     if (padrao && resultado !== null && resultado !== undefined) {
       const res_num = parseFloat(resultado);
@@ -974,6 +979,7 @@ app.post("/api/analises", autenticar, async (req, res) => {
       dataInoculacao: dataInoculacao ? new Date(dataInoculacao) : new Date(),
       dataPrevistaLeitura: dataPrevistaLeitura ? new Date(dataPrevistaLeitura) : new Date(),
       produtoId: produto,
+      produtoNome: produtoNome,
       categoria,
       pontoColeta,
       microrganismo,

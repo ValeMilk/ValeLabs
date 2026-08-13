@@ -72,7 +72,7 @@ export function DashboardPage() {
       
       // Agrupa por produto
       analises.forEach((analise: any) => {
-        const produtoNome = analise.produto || 'Sem produto';
+        const produtoNome = analise.produtoNome || 'Sem produto';
         if (!agrupadoProduto[produtoNome]) {
           agrupadoProduto[produtoNome] = {
             nome: produtoNome,
@@ -88,7 +88,7 @@ export function DashboardPage() {
       const microsPorProduto: Record<string, Set<string>> = {};
       
       analises.forEach((analise: any) => {
-        const produtoNome = analise.produto || 'Sem produto';
+        const produtoNome = analise.produtoNome || 'Sem produto';
         const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
         const microNome = analise.microrganismo || 'Desconhecido';
         
@@ -146,10 +146,12 @@ export function DashboardPage() {
       setProdutoSelecionado(produtoNome);
       
       const response = await api.get('/analises', {
-        params: { categoria, produto: produtoNome }
+        params: { categoria }
       });
       
-      const analises = response.data.dados || [];
+      const todasAsAnalises = response.data.dados || [];
+      // Filtrar apenas as análises do produto selecionado
+      const analises = todasAsAnalises.filter((a: any) => a.produtoNome === produtoNome);
       const agrupadoMicro: Record<string, MicroorganismoData> = {};
       
       analises.forEach((analise: any) => {
