@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { api, getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
 
 interface Produto {
@@ -20,6 +21,7 @@ export function CategoriaPage() {
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     categoria: '',
@@ -28,8 +30,14 @@ export function CategoriaPage() {
   });
 
   useEffect(() => {
+    const usuario = getUsuario();
+    const perfisAutorizados = ['Admin', 'Diretora', 'Supervisora Qualidade'];
+    if (!usuario || !perfisAutorizados.includes(usuario.perfil)) {
+      navigate('/dashboard');
+      return;
+    }
     carregarDados();
-  }, []);
+  }, [navigate]);
 
   const carregarDados = async () => {
     try {

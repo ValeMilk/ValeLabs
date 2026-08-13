@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { api, getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
 
 interface Padrao {
@@ -28,6 +29,7 @@ export function PadroesPage() {
   const [editando, setEditando] = useState<Padrao | null>(null);
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     categoria: '',
@@ -35,13 +37,18 @@ export function PadroesPage() {
     limiteMinimo: '',
     limiteMaximo: '',
     unidade: 'UFC/mL',
-    criticidade: 'CONFORME',
     vigem: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
+    const usuario = getUsuario();
+    const perfisAutorizados = ['Admin', 'Diretora', 'Supervisora Qualidade'];
+    if (!usuario || !perfisAutorizados.includes(usuario.perfil)) {
+      navigate('/dashboard');
+      return;
+    }
     carregarDados();
-  }, []);
+  }, [navigate]);
 
   const carregarDados = async () => {
     try {
@@ -69,7 +76,6 @@ export function PadroesPage() {
       limiteMinimo: '',
       limiteMaximo: '',
       unidade: 'UFC/mL',
-      criticidade: 'CONFORME',
       vigem: new Date().toISOString().split('T')[0]
     });
     setShowModal(true);
@@ -83,7 +89,6 @@ export function PadroesPage() {
       limiteMinimo: padrao.limiteMinimo.toString(),
       limiteMaximo: padrao.limiteMaximo.toString(),
       unidade: padrao.unidade,
-      criticidade: padrao.criticidade,
       vigem: padrao.vigem.split('T')[0]
     });
     setShowModal(true);
@@ -103,7 +108,6 @@ export function PadroesPage() {
         limiteMinimo: parseFloat(formData.limiteMinimo),
         limiteMaximo: parseFloat(formData.limiteMaximo),
         unidade: formData.unidade,
-        criticidade: formData.criticidade,
         vigem: formData.vigem
       };
 
@@ -345,21 +349,6 @@ export function PadroesPage() {
                     placeholder="UFC/mL"
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Criticidade
-                  </label>
-                  <select
-                    value={formData.criticidade}
-                    onChange={(e) => setFormData({ ...formData, criticidade: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="CONFORME">Conforme</option>
-                    <option value="ATENÇÃO">Atenção</option>
-                    <option value="CRÍTICO">Crítico</option>
-                  </select>
                 </div>
 
                 <div>

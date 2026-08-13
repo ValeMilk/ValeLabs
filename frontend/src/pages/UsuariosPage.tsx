@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 interface Usuario {
   _id: string;
   nome: string;
-  perfil: 'Admin' | 'Diretora' | 'Qualidade';
+  perfil: 'Admin' | 'Diretora' | 'Supervisora Qualidade' | 'Qualidade';
   ativo: boolean;
 }
 
@@ -261,7 +261,7 @@ export function UsuariosPage() {
                     Perfil
                   </label>
                   <div className="space-y-2 border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto">
-                    {['Admin', 'Diretora', 'Qualidade'].map((perfil) => (
+                    {['Admin', 'Diretora', 'Supervisora Qualidade', 'Qualidade'].map((perfil) => (
                       <label key={perfil} className="flex items-center space-x-3 cursor-pointer">
                         <input
                           type="radio"

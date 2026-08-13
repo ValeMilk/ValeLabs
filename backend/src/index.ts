@@ -33,7 +33,7 @@ async function conectarMongoDB() {
 const usuarioSchema = new mongoose.Schema({
   nome: { type: String, required: true, unique: true },
   senha: { type: String, required: true },
-  perfil: { type: String, enum: ["Admin", "Diretora", "Qualidade"], default: "Qualidade" },
+  perfil: { type: String, enum: ["Admin", "Diretora", "Supervisora Qualidade", "Qualidade"], default: "Qualidade" },
   ativo: { type: Boolean, default: true },
   criadoEm: { type: Date, default: Date.now }
 });
@@ -82,11 +82,31 @@ const analiseSchema = new mongoose.Schema({
   criadoEm: { type: Date, default: Date.now }
 });
 
+const auditoriaPadraoSchema = new mongoose.Schema({
+  padraoId: { type: mongoose.Schema.Types.ObjectId, ref: "Padrao", required: true, index: true },
+  usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", required: true, index: true },
+  usuarioNome: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now, index: -1 },
+  acao: { type: String, enum: ["criar", "editar", "deletar"], required: true },
+  dados: {
+    categoria: String,
+    microrganismo: String,
+    limiteMinimo: Number,
+    limiteMaximo: Number,
+    unidade: String,
+    criticidade: String,
+    vigem: Date
+  },
+  dadosAnigos: mongoose.Schema.Types.Mixed,
+  descricao: String
+});
+
 const Usuario = mongoose.model("Usuario", usuarioSchema);
 const Produto = mongoose.model("Produto", produtoSchema);
 const Padrao = mongoose.model("Padrao", padraoSchema);
 const Microrganismo = mongoose.model("Microrganismo", microrganismoSchema);
 const Analise = mongoose.model("Analise", analiseSchema);
+const AuditoriaPadrao = mongoose.model("AuditoriaPadrao", auditoriaPadraoSchema);
 
 // ========== MIDDLEWARE AUTENTICAÇÃO & AUTORIZAÇÃO ==========
 function autenticar(req: any, res: any, next: any) {
@@ -112,6 +132,43 @@ function autorizarAdmin(req: any, res: any, next: any) {
     return res.status(403).json({ sucesso: false, mensagem: "Apenas Admin pode acessar" });
   }
   next();
+}
+
+function autorizarQualidade(req: any, res: any, next: any) {
+  if (!req.usuario) {
+    return res.status(401).json({ sucesso: false, mensagem: "Não autenticado" });
+  }
+  const perfisAutorizados = ["Admin", "Diretora", "Supervisora Qualidade"];
+  if (!perfisAutorizados.includes(req.usuario.perfil)) {
+    return res.status(403).json({ sucesso: false, mensagem: "Acesso restrito. Apenas Admin, Diretora e Supervisora Qualidade podem acessar" });
+  }
+  next();
+}
+
+// ========== AUDITORIA ==========
+async function registrarAuditoriaPadrao(
+  padraoId: string,
+  usuarioId: string,
+  usuarioNome: string,
+  acao: "criar" | "editar" | "deletar",
+  dados: any,
+  dadosAntigos?: any,
+  descricao?: string
+) {
+  try {
+    const auditoria = new AuditoriaPadrao({
+      padraoId,
+      usuarioId,
+      usuarioNome,
+      acao,
+      dados,
+      dadosAnigos: dadosAntigos,
+      descricao
+    });
+    await auditoria.save();
+  } catch (erro) {
+    console.error("Erro ao registrar auditoria:", erro);
+  }
 }
 
 // ========== ROUTES ==========
@@ -178,6 +235,7 @@ app.post("/api/auth/seed", async (req, res) => {
     const usuarios = [
       { nome: "Admin", perfil: "Admin", senha: "Admin@123" },
       { nome: "Diretora", perfil: "Diretora", senha: "Diretora@123" },
+      { nome: "Supervisora Qualidade", perfil: "Supervisora Qualidade", senha: "Supervisora@123" },
       { nome: "Qualidade", perfil: "Qualidade", senha: "Qualidade@123" }
     ];
     
@@ -522,7 +580,7 @@ app.get("/api/microrganismos", autenticar, async (req, res) => {
 });
 
 // POST criar microrganismo
-app.post("/api/microrganismos", autenticar, autorizarAdmin, async (req, res) => {
+app.post("/api/microrganismos", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { nome } = req.body;
     if (!nome || !nome.trim()) {
@@ -548,7 +606,7 @@ app.post("/api/microrganismos", autenticar, autorizarAdmin, async (req, res) => 
 });
 
 // PUT atualizar microrganismo
-app.put("/api/microrganismos/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.put("/api/microrganismos/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { nome, ativo } = req.body;
     
@@ -577,7 +635,7 @@ app.put("/api/microrganismos/:id", autenticar, autorizarAdmin, async (req, res) 
 });
 
 // DELETE microrganismo
-app.delete("/api/microrganismos/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.delete("/api/microrganismos/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const microrganismo = await Microrganismo.findByIdAndDelete(req.params.id);
     
@@ -626,7 +684,7 @@ app.get("/api/padroes", autenticar, async (req, res) => {
 });
 
 // POST criar padrão
-app.post("/api/padroes", autenticar, autorizarAdmin, async (req, res) => {
+app.post("/api/padroes", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { categoria, microrganismo, limiteMinimo, limiteMaximo, unidade, criticidade, vigem } = req.body;
     
@@ -664,6 +722,17 @@ app.post("/api/padroes", autenticar, autorizarAdmin, async (req, res) => {
     
     await padrao.save();
     
+    // Registrar auditoria
+    await registrarAuditoriaPadrao(
+      padrao._id.toString(),
+      (req.usuario as any).id,
+      (req.usuario as any).nome,
+      "criar",
+      { categoria, microrganismo, limiteMinimo, limiteMaximo, unidade, vigem },
+      undefined,
+      `Novo padrão criado para ${categoria} - ${micro.nome}`
+    );
+    
     res.status(201).json({
       sucesso: true,
       mensagem: "Padrão criado",
@@ -675,9 +744,15 @@ app.post("/api/padroes", autenticar, autorizarAdmin, async (req, res) => {
 });
 
 // PUT atualizar padrão
-app.put("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.put("/api/padroes/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { limiteMinimo, limiteMaximo, criticidade, vigem, ativo } = req.body;
+    
+    // Buscar padrão anterior para auditoria
+    const padraoAnterior = await Padrao.findById(req.params.id);
+    if (!padraoAnterior) {
+      return res.status(404).json({ sucesso: false, mensagem: "Padrão não encontrado" });
+    }
     
     const dadosAtualizacao: any = {};
     if (limiteMinimo !== undefined) dadosAtualizacao.limiteMinimo = limiteMinimo;
@@ -692,9 +767,23 @@ app.put("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
       { new: true }
     );
     
-    if (!padrao) {
-      return res.status(404).json({ sucesso: false, mensagem: "Padrão não encontrado" });
-    }
+    // Registrar auditoria
+    const camposAlterados: string[] = [];
+    if (limiteMinimo !== undefined) camposAlterados.push(`limiteMinimo: ${padraoAnterior.limiteMinimo} → ${limiteMinimo}`);
+    if (limiteMaximo !== undefined) camposAlterados.push(`limiteMaximo: ${padraoAnterior.limiteMaximo} → ${limiteMaximo}`);
+    if (criticidade !== undefined) camposAlterados.push(`criticidade: ${padraoAnterior.criticidade} → ${criticidade}`);
+    if (vigem !== undefined) camposAlterados.push(`vigem: ${padraoAnterior.vigem} → ${vigem}`);
+    if (ativo !== undefined) camposAlterados.push(`ativo: ${padraoAnterior.ativo} → ${ativo}`);
+    
+    await registrarAuditoriaPadrao(
+      req.params.id,
+      (req.usuario as any).id,
+      (req.usuario as any).nome,
+      "editar",
+      dadosAtualizacao,
+      padraoAnterior.toObject(),
+      `Padrão atualizado: ${camposAlterados.join(", ")}`
+    );
     
     res.json({
       sucesso: true,
@@ -707,13 +796,24 @@ app.put("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
 });
 
 // DELETE padrão
-app.delete("/api/padroes/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.delete("/api/padroes/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const padrao = await Padrao.findByIdAndDelete(req.params.id);
     
     if (!padrao) {
       return res.status(404).json({ sucesso: false, mensagem: "Padrão não encontrado" });
     }
+    
+    // Registrar auditoria
+    await registrarAuditoriaPadrao(
+      req.params.id,
+      (req.usuario as any).id,
+      (req.usuario as any).nome,
+      "deletar",
+      { categoria: padrao.categoria, microrganismo: padrao.microrganismo },
+      padrao.toObject(),
+      `Padrão deletado: ${padrao.categoria} - ${padrao.microrganismo}`
+    );
     
     res.json({
       sucesso: true,
@@ -746,7 +846,7 @@ app.get("/api/produtos", autenticar, async (req, res) => {
   }
 });
 
-app.post("/api/produtos", autenticar, autorizarAdmin, async (req, res) => {
+app.post("/api/produtos", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { nome, categoria, descricao } = req.body;
     
@@ -776,7 +876,7 @@ app.post("/api/produtos", autenticar, autorizarAdmin, async (req, res) => {
   }
 });
 
-app.put("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.put("/api/produtos/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { nome, categoria, descricao } = req.body;
     
@@ -801,7 +901,7 @@ app.put("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => {
   }
 });
 
-app.delete("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => {
+app.delete("/api/produtos/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const produto = await Produto.findByIdAndDelete(req.params.id);
     
@@ -823,6 +923,41 @@ app.delete("/api/produtos/:id", autenticar, autorizarAdmin, async (req, res) => 
 app.use((err: any, req: any, res: any) => {
   console.error("Erro:", err);
   res.status(500).json({ sucesso: false, mensagem: err.message || "Erro interno" });
+});
+
+// ========== AUDITORIA - GET LOGS ==========
+app.get("/api/auditoria/padroes", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const logs = await AuditoriaPadrao.find()
+      .sort({ timestamp: -1 })
+      .limit(500)
+      .populate('usuarioId', 'nome');
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Logs de auditoria de padrões",
+      dados: logs
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// GET auditoria de um padrão específico
+app.get("/api/auditoria/padroes/:padraoId", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const logs = await AuditoriaPadrao.find({ padraoId: req.params.padraoId })
+      .sort({ timestamp: -1 })
+      .populate('usuarioId', 'nome');
+    
+    res.json({
+      sucesso: true,
+      mensagem: "Logs de auditoria do padrão",
+      dados: logs
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
 });
 
 // ========== START SERVER ==========

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { api, getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
 
 interface Microrganismo {
@@ -16,10 +17,17 @@ export function MicroorganismoPage() {
   const [editando, setEditando] = useState<Microrganismo | null>(null);
   const [nome, setNome] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    const usuario = getUsuario();
+    const perfisAutorizados = ['Admin', 'Diretora', 'Supervisora Qualidade'];
+    if (!usuario || !perfisAutorizados.includes(usuario.perfil)) {
+      navigate('/dashboard');
+      return;
+    }
     carregarMicrorganismos();
-  }, []);
+  }, [navigate]);
 
   const carregarMicrorganismos = async () => {
     try {
