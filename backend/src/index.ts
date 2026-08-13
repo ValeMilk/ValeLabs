@@ -1077,10 +1077,43 @@ app.use((err: any, req: any, res: any, next: any) => {
   res.status(500).json({ sucesso: false, mensagem: err.message || "Erro interno" });
 });
 
+// ========== FUNÇÕES UTILITÁRIAS ==========
+
+// Migração: Preencher produtoNome em análises antigas
+async function migrarProdutoNome() {
+  try {
+    const analisesSemNome = await Analise.find({ produtoNome: { $exists: false } }).limit(1000);
+    
+    if (analisesSemNome.length === 0) {
+      console.log("✅ Nenhuma análise para migrar");
+      return;
+    }
+    
+    console.log(`🔄 Migrando ${analisesSemNome.length} análises...`);
+    
+    for (const analise of analisesSemNome) {
+      try {
+        const produto = await Produto.findById(analise.produtoId);
+        if (produto) {
+          analise.produtoNome = produto.nome;
+          await analise.save();
+        }
+      } catch (e) {
+        console.error(`Erro ao migrar análise ${analise._id}:`, e);
+      }
+    }
+    
+    console.log("✅ Migração de produtoNome concluída");
+  } catch (erro) {
+    console.error("Erro na migração:", erro);
+  }
+}
+
 // ========== START SERVER ==========
 async function start() {
   try {
     await conectarMongoDB();
+    await migrarProdutoNome();
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
       console.log(`📝 Health: http://localhost:${PORT}/api/health`);
