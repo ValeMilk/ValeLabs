@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, Package, CheckCircle, Eye, Microscope, Users } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
+import { ExpandableTabs } from './ui/expandable-tabs';
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,7 +18,39 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+  // Definir todas as abas disponíveis com seus ícones
+  const allTabs = [
+    { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { title: 'Lançamentos', icon: FileText, path: '/lancamentos' },
+    { title: 'Produtos', icon: Package, path: '/categorias' },
+    { title: 'Padrões', icon: CheckCircle, path: '/padroes' },
+    ...(usuario?.perfil === 'Admin' || usuario?.perfil === 'Diretora' || usuario?.perfil === 'Supervisora Qualidade'
+      ? [{ title: 'Auditoria', icon: Eye, path: '/auditoria' }]
+      : []),
+    ...(usuario?.perfil === 'Admin'
+      ? [
+          { title: 'Microrganismos', icon: Microscope, path: '/microrganismos' },
+          { title: 'Usuários', icon: Users, path: '/usuarios' },
+        ]
+      : []),
+  ];
+
+  // Encontrar o índice da aba ativa
+  const selectedIndex = useMemo(() => {
+    return allTabs.findIndex((tab) => location.pathname === tab.path || location.pathname.startsWith(tab.path + '/'));
+  }, [location.pathname, allTabs]);
+
+  // Converter para formato do ExpandableTabs
+  const tabs = allTabs.map((tab) => ({
+    title: tab.title,
+    icon: tab.icon,
+  }));
+
+  const handleTabChange = (index: number | null) => {
+    if (index !== null && index < allTabs.length) {
+      navigate(allTabs[index].path);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -25,29 +58,23 @@ export function Layout({ children }: LayoutProps) {
       <nav className="bg-white shadow border-b border-gray-200">
         <div className="max-w-full mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center">
+          <Link to="/dashboard" className="flex items-center flex-shrink-0">
             <img src="/logo.png" alt="Vale Labs" className="h-12 w-auto" />
           </Link>
 
-          {/* Center Navigation */}
-          <div className="flex items-center space-x-1">
-            <NavLink to="/dashboard" label="Dashboard" isActive={isActive('/dashboard')} />
-            <NavLink to="/lancamentos" label="Lançamentos" isActive={isActive('/lancamentos')} />
-            <NavLink to="/categorias" label="Produtos" isActive={isActive('/categorias')} />
-            <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
-            {usuario?.perfil === 'Admin' || usuario?.perfil === 'Diretora' || usuario?.perfil === 'Supervisora Qualidade' ? (
-              <NavLink to="/auditoria" label="Auditoria" isActive={isActive('/auditoria')} />
-            ) : null}
-            {usuario?.perfil === 'Admin' && (
-              <>
-                <NavLink to="/microrganismos" label="Microrganismos" isActive={isActive('/microrganismos')} />
-                <NavLink to="/usuarios" label="Usuários" isActive={isActive('/usuarios')} />
-              </>
-            )}
+          {/* Center Navigation - ExpandableTabs */}
+          <div className="flex-1 flex items-center justify-center mx-6">
+            <ExpandableTabs
+              tabs={tabs}
+              selected={selectedIndex >= 0 ? selectedIndex : null}
+              onChange={handleTabChange}
+              className="border-gray-200"
+              activeColor="text-blue-600"
+            />
           </div>
 
           {/* Right: User Info & Logout */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 flex-shrink-0">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-gray-800">{usuario?.nome}</p>
               <p className="text-xs text-gray-500">{usuario?.perfil}</p>
@@ -68,29 +95,5 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-full mx-auto px-6 py-8">{children}</div>
       </main>
     </div>
-  );
-}
-
-interface NavLinkProps {
-  to: string;
-  label: string;
-  isActive: boolean;
-}
-
-function NavLink({ to, label, isActive }: NavLinkProps) {
-  return (
-    <Link
-      to={to}
-      className={`
-        px-4 py-2 text-sm font-medium rounded-lg transition-colors
-        ${
-          isActive
-            ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600'
-            : 'text-gray-700 hover:bg-gray-50'
-        }
-      `}
-    >
-      {label}
-    </Link>
   );
 }
