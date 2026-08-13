@@ -61,7 +61,7 @@ export function LancamentosPage() {
       console.log('Dados Padrões recebidos:', resPadroes.data);
       console.log('Dados Produtos recebidos:', resProdutos.data);
       
-      setAnalises(resAnalises.data.dados?.dados || []);
+      setAnalises(resAnalises.data.dados || []);
       setProdutos(resProdutos.data.dados || []);
       setPadroes(resPadroes.data.dados || []);
       setErro('');
