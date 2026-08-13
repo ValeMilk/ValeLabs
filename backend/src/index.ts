@@ -712,7 +712,7 @@ app.post("/api/padroes", autenticar, autorizarQualidade, async (req, res) => {
     
     const padrao = new Padrao({
       categoria,
-      microrganismo,
+      microrganismo: micro.nome,
       limiteMinimo,
       limiteMaximo,
       unidade: unidade || "UFC/mL",
