@@ -126,7 +126,7 @@ export default function ProgressMetricCard({
 
   const primary = visibleSeries[0];
   const isMulti = visibleSeries.length > 1;
-  const hasData = (primary?.data.length ?? 0) >= 2;
+  const hasData = (primary?.data.length ?? 0) >= 1;
 
   const stats = useMemo(() => {
     const vals = primary?.data.map((d) => d.value) ?? [];
