@@ -17,6 +17,7 @@ import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-
 
 interface ProdutoData {
   nome: string;
+  produtoId?: string;
   percentualReprovacao: number;
   historico: SeriesPoint[];
   microrganismos: MicroorganismoData[];
@@ -76,6 +77,7 @@ export function DashboardPage() {
         if (!agrupadoProduto[produtoNome]) {
           agrupadoProduto[produtoNome] = {
             nome: produtoNome,
+            produtoId: analise.produtoId,
             percentualReprovacao: 0,
             historico: [],
             microrganismos: [],
@@ -89,7 +91,7 @@ export function DashboardPage() {
       
       analises.forEach((analise: any) => {
         const produtoNome = analise.produtoNome || 'Sem produto';
-        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        const data = analise.dataInoculacao ? new Date(analise.dataInoculacao).toLocaleDateString('pt-BR') : 'sem data';
         const microNome = analise.microrganismo || 'Desconhecido';
         
         if (!historicoProduto[produtoNome]) historicoProduto[produtoNome] = {};
@@ -151,7 +153,11 @@ export function DashboardPage() {
       
       const todasAsAnalises = response.data.dados || [];
       // Filtrar apenas as análises do produto selecionado
-      const analises = todasAsAnalises.filter((a: any) => a.produtoNome === produtoNome);
+      // Compatível com dados antigos (produtoId) e novos (produtoNome)
+      const produtoAtual = produtos.find(p => p.nome === produtoNome);
+      const analises = todasAsAnalises.filter((a: any) => 
+        a.produtoNome === produtoNome || a.produtoId === produtoAtual?.produtoId
+      );
       const agrupadoMicro: Record<string, MicroorganismoData> = {};
       
       analises.forEach((analise: any) => {
@@ -170,7 +176,7 @@ export function DashboardPage() {
       
       analises.forEach((analise: any) => {
         const microNome = analise.microrganismo || 'Desconhecido';
-        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        const data = analise.dataInoculacao ? new Date(analise.dataInoculacao).toLocaleDateString('pt-BR') : 'sem data';
         
         if (!historicoMicro[microNome]) historicoMicro[microNome] = {};
         if (!historicoMicro[microNome][data]) {
