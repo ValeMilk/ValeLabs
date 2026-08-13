@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
-
-interface Produto {
-  _id: string;
-  nome: string;
-  categoria: string;
-  descricao?: string;
-  ativo: boolean;
-  criadoEm: string;
-}
+import type { Produto } from '../types/shared-types';
 
 export function CategoriaPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);

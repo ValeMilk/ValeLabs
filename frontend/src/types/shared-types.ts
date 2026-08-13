@@ -105,6 +105,7 @@ export interface CriarPadraoRequest {
 export interface Produto {
   _id?: string;
   nome: string;
+  categoria: string;
   descricao: string;
   ativo: boolean;
   criadoEm: Date;
