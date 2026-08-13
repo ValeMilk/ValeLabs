@@ -35,6 +35,9 @@ export function Layout({ children }: LayoutProps) {
             <NavLink to="/lancamentos" label="Lançamentos" isActive={isActive('/lancamentos')} />
             <NavLink to="/categorias" label="Produtos" isActive={isActive('/categorias')} />
             <NavLink to="/padroes" label="Padrões" isActive={isActive('/padroes')} />
+            {usuario?.perfil === 'Admin' || usuario?.perfil === 'Diretora' || usuario?.perfil === 'Supervisora Qualidade' ? (
+              <NavLink to="/auditoria" label="Auditoria" isActive={isActive('/auditoria')} />
+            ) : null}
             {usuario?.perfil === 'Admin' && (
               <>
                 <NavLink to="/microrganismos" label="Microrganismos" isActive={isActive('/microrganismos')} />

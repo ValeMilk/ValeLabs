@@ -7,6 +7,7 @@ import { LancamentosPage } from './pages/LancamentosPage';
 import { PadroesPage } from './pages/PadroesPage';
 import { MicroorganismoPage } from './pages/MicroorganismoPage';
 import { UsuariosPage } from './pages/UsuariosPage';
+import { AuditoriaPage } from './pages/AuditoriaPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 function App() {
@@ -74,6 +75,15 @@ function App() {
           element={
             <ProtectedRoute>
               <UsuariosPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/auditoria"
+          element={
+            <ProtectedRoute>
+              <AuditoriaPage />
             </ProtectedRoute>
           }
         />
