@@ -15,20 +15,27 @@ import {
 } from 'lucide-react';
 import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
 
-interface AnaliseData {
-  data: string;
-  total: number;
-  aprovados: number;
-  reprovados: number;
-  pendentes: number;
+interface MicroorganismoData {
+  nome: string;
+  percentualReprovacao: number;
+  historico: SeriesPoint[];
+  produtos: ProdutoData[];
+}
+
+interface ProdutoData {
+  nome: string;
+  percentualReprovacao: number;
+  historico: SeriesPoint[];
 }
 
 export function DashboardPage() {
   const [categorias, setCategorias] = useState<DashboardCategoria[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
-  const [viewDetalhe, setViewDetalhe] = useState<string | null>(null);
-  const [analisesDetalhe, setAnalisesDetalhe] = useState<AnaliseData[]>([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string | null>(null);
+  const [microSelecionado, setMicroSelecionado] = useState<string | null>(null);
+  const [microorganismos, setMicroorganismos] = useState<MicroorganismoData[]>([]);
+  const [produtosMicro, setProdutosMicro] = useState<ProdutoData[]>([]);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
   const navigate = useNavigate();
 
@@ -49,45 +56,152 @@ export function DashboardPage() {
     }
   };
 
-  const carregarAnalisesDetalhe = async (categoria: string) => {
+  const carregarMicroorganismos = async (categoria: string) => {
     try {
       setCarregandoDetalhe(true);
-      setViewDetalhe(categoria);
-      // Busca análises da categoria
+      setCategoriaSelecionada(categoria);
+      setMicroSelecionado(null);
+      
       const response = await api.get('/analises', {
         params: { categoria }
       });
       
-      // Agrupa análises por data
       const analises = response.data.dados || [];
-      const agrupadoPorData: Record<string, AnaliseData> = {};
+      const agrupadoMicro: Record<string, MicroorganismoData> = {};
       
       analises.forEach((analise: any) => {
-        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
-        if (!agrupadoPorData[data]) {
-          agrupadoPorData[data] = {
-            data,
-            total: 0,
-            aprovados: 0,
-            reprovados: 0,
-            pendentes: 0,
+        const microNome = analise.microrganismo || 'Desconhecido';
+        if (!agrupadoMicro[microNome]) {
+          agrupadoMicro[microNome] = {
+            nome: microNome,
+            percentualReprovacao: 0,
+            historico: [],
+            produtos: [],
           };
-        }
-        agrupadoPorData[data].total += 1;
-        if (analise.statusConformidade === 'APROVADO') {
-          agrupadoPorData[data].aprovados += 1;
-        } else if (analise.statusConformidade === 'REPROVADO') {
-          agrupadoPorData[data].reprovados += 1;
-        } else {
-          agrupadoPorData[data].pendentes += 1;
         }
       });
       
-      setAnalisesDetalhe(Object.values(agrupadoPorData).sort((a, b) => 
-        new Date(a.data).getTime() - new Date(b.data).getTime()
-      ));
+      // Agrupa por microrganismo e data para histórico
+      const historicoMicro: Record<string, Record<string, { total: number; reprovados: number }>> = {};
+      const produtosPorMicro: Record<string, Set<string>> = {};
+      
+      analises.forEach((analise: any) => {
+        const microNome = analise.microrganismo || 'Desconhecido';
+        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        const produto = analise.produto || 'Sem produto';
+        
+        if (!historicoMicro[microNome]) historicoMicro[microNome] = {};
+        if (!historicoMicro[microNome][data]) {
+          historicoMicro[microNome][data] = { total: 0, reprovados: 0 };
+        }
+        
+        historicoMicro[microNome][data].total += 1;
+        if (analise.statusConformidade === 'REPROVADO') {
+          historicoMicro[microNome][data].reprovados += 1;
+        }
+        
+        if (!produtosPorMicro[microNome]) produtosPorMicro[microNome] = new Set();
+        produtosPorMicro[microNome].add(produto);
+      });
+      
+      // Monta array de microrganismos com histórico
+      Object.keys(agrupadoMicro).forEach((microNome) => {
+        const historicoDatas = historicoMicro[microNome] || {};
+        const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
+          ([data, { reprovados, total }]) => ({
+            value: total > 0 ? (reprovados / total) * 100 : 0,
+            date: data,
+          })
+        );
+        
+        const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
+        const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
+        
+        agrupadoMicro[microNome].historico = historico.sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        agrupadoMicro[microNome].percentualReprovacao = totalAnalises > 0 
+          ? (totalReprovados / totalAnalises) * 100 
+          : 0;
+        agrupadoMicro[microNome].produtos = Array.from(produtosPorMicro[microNome] || new Set()).map(p => ({
+          nome: p,
+          percentualReprovacao: 0,
+          historico: [],
+        }));
+      });
+      
+      setMicroorganismos(Object.values(agrupadoMicro));
     } catch (err: any) {
-      setErro(err.response?.data?.mensagem || 'Erro ao carregar detalhe');
+      setErro(err.response?.data?.mensagem || 'Erro ao carregar microrganismos');
+    } finally {
+      setCarregandoDetalhe(false);
+    }
+  };
+
+  const carregarProdutosMicro = async (categoria: string, microNome: string) => {
+    try {
+      setCarregandoDetalhe(true);
+      setMicroSelecionado(microNome);
+      
+      const response = await api.get('/analises', {
+        params: { categoria, microrganismo: microNome }
+      });
+      
+      const analises = response.data.dados || [];
+      const agrupadoProduto: Record<string, ProdutoData> = {};
+      
+      analises.forEach((analise: any) => {
+        const produtoNome = analise.produto || 'Sem produto';
+        if (!agrupadoProduto[produtoNome]) {
+          agrupadoProduto[produtoNome] = {
+            nome: produtoNome,
+            percentualReprovacao: 0,
+            historico: [],
+          };
+        }
+      });
+      
+      // Agrupa por produto e data
+      const historicoProduto: Record<string, Record<string, { total: number; reprovados: number }>> = {};
+      
+      analises.forEach((analise: any) => {
+        const produtoNome = analise.produto || 'Sem produto';
+        const data = analise.data ? new Date(analise.data).toLocaleDateString('pt-BR') : 'sem data';
+        
+        if (!historicoProduto[produtoNome]) historicoProduto[produtoNome] = {};
+        if (!historicoProduto[produtoNome][data]) {
+          historicoProduto[produtoNome][data] = { total: 0, reprovados: 0 };
+        }
+        
+        historicoProduto[produtoNome][data].total += 1;
+        if (analise.statusConformidade === 'REPROVADO') {
+          historicoProduto[produtoNome][data].reprovados += 1;
+        }
+      });
+      
+      Object.keys(agrupadoProduto).forEach((produtoNome) => {
+        const historicoDatas = historicoProduto[produtoNome] || {};
+        const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
+          ([data, { reprovados, total }]) => ({
+            value: total > 0 ? (reprovados / total) * 100 : 0,
+            date: data,
+          })
+        );
+        
+        const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
+        const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
+        
+        agrupadoProduto[produtoNome].historico = historico.sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        agrupadoProduto[produtoNome].percentualReprovacao = totalAnalises > 0 
+          ? (totalReprovados / totalAnalises) * 100 
+          : 0;
+      });
+      
+      setProdutosMicro(Object.values(agrupadoProduto));
+    } catch (err: any) {
+      setErro(err.response?.data?.mensagem || 'Erro ao carregar produtos');
     } finally {
       setCarregandoDetalhe(false);
     }
@@ -122,83 +236,167 @@ export function DashboardPage() {
     }
   };
 
-  // Visão detalhe: gráfico de linha temporal da categoria
-  if (viewDetalhe) {
-    const categoria = categorias.find(c => c.categoria === viewDetalhe);
+  // Nível 2: Produtos de um microrganismo
+  if (categoriaSelecionada && microSelecionado) {
+    const categoria = categorias.find(c => c.categoria === categoriaSelecionada);
+    const micro = microorganismos.find(m => m.nome === microSelecionado);
     
-    // Prepara dados para ProgressMetricCard
-    const totalSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
-      value: d.total,
-      date: d.data,
-    }));
-    
-    const aprovadosSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
-      value: d.aprovados,
-      date: d.data,
-    }));
-    
-    const reprovadosSeriesData: SeriesPoint[] = analisesDetalhe.map(d => ({
-      value: d.reprovados,
-      date: d.data,
-    }));
-
     return (
       <div className="max-w-7xl mx-auto">
-        {/* Botão voltar */}
-        <div className="mb-6 flex items-center gap-3">
+        {/* Breadcrumb + Voltar */}
+        <div className="mb-6 flex items-center gap-2">
           <button
-            onClick={() => setViewDetalhe(null)}
+            onClick={() => setMicroSelecionado(null)}
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={18} />
             Voltar
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">{viewDetalhe}</h1>
+          <span className="text-gray-500">/</span>
+          <button
+            onClick={() => setCategoriaSelecionada(null)}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            {categoriaSelecionada}
+          </button>
+          <span className="text-gray-500">/</span>
+          <h1 className="text-2xl font-bold text-gray-800">{microSelecionado}</h1>
+        </div>
+
+        {/* Cards de produtos com gráficos */}
+        {carregandoDetalhe ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : produtosMicro.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Sem produtos para este microrganismo</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {produtosMicro.map((produto) => (
+              <ProgressMetricCard
+                key={produto.nome}
+                title={produto.nome}
+                data={produto.historico}
+                size="md"
+                accent={
+                  produto.percentualReprovacao > 50 
+                    ? 'rose' 
+                    : produto.percentualReprovacao > 25 
+                    ? 'amber' 
+                    : 'emerald'
+                }
+                loading={carregandoDetalhe}
+                valueFormatter={(v) => `${Math.round(v)}%`}
+                dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+                unit="%"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Nível 1: Microrganismos de uma categoria
+  if (categoriaSelecionada) {
+    const categoria = categorias.find(c => c.categoria === categoriaSelecionada);
+    
+    return (
+      <div className="max-w-7xl mx-auto">
+        {/* Breadcrumb + Voltar */}
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            onClick={() => setCategoriaSelecionada(null)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Voltar ao Dashboard
+          </button>
+          <h1 className="text-2xl font-bold text-gray-800">{categoriaSelecionada}</h1>
           {categoria && (
-            <div className="ml-auto flex gap-2">
-              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                ✓ {categoria.aprovadas} aprovadas
+            <div className="ml-auto flex gap-2 text-sm">
+              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium">
+                ✓ {categoria.aprovadas}
               </div>
-              <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                ✗ {categoria.reprovadas} reprovadas
-              </div>
-              <div className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                ⏳ {categoria.aguardandoLeitura} aguardando
+              <div className="px-3 py-1 bg-red-100 text-red-700 rounded-full font-medium">
+                ✗ {categoria.reprovadas}
               </div>
             </div>
           )}
         </div>
 
-        {/* Cards de métrica */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <ProgressMetricCard
-            title="Total de Análises"
-            data={totalSeriesData}
-            size="md"
-            accent="blue"
-            loading={carregandoDetalhe}
-            valueFormatter={(v) => Math.round(v).toString()}
-            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-          />
-          <ProgressMetricCard
-            title="Análises Aprovadas"
-            data={aprovadosSeriesData}
-            size="md"
-            accent="emerald"
-            loading={carregandoDetalhe}
-            valueFormatter={(v) => Math.round(v).toString()}
-            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-          />
-          <ProgressMetricCard
-            title="Análises Reprovadas"
-            data={reprovadosSeriesData}
-            size="md"
-            accent="rose"
-            loading={carregandoDetalhe}
-            valueFormatter={(v) => Math.round(v).toString()}
-            dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-          />
-        </div>
+        {/* Cards de microrganismos com gráficos */}
+        {carregandoDetalhe ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : microorganismos.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Sem microrganismos nesta categoria</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {microorganismos.map((micro) => (
+              <div
+                key={micro.nome}
+                onClick={() => carregarProdutosMicro(categoriaSelecionada, micro.nome)}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-600 p-5"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">{micro.nome}</h3>
+                    <p className="text-sm text-gray-600">
+                      {micro.produtos.length} produto(s) | Taxa de reprovação: {micro.percentualReprovacao.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full font-bold text-sm ${
+                    micro.percentualReprovacao > 50 
+                      ? 'bg-red-100 text-red-700' 
+                      : micro.percentualReprovacao > 25 
+                      ? 'bg-yellow-100 text-yellow-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {micro.percentualReprovacao.toFixed(1)}%
+                  </div>
+                </div>
+
+                {/* Mini gráfico inline */}
+                {micro.historico.length >= 2 && (
+                  <div className="mb-4 h-12">
+                    <ProgressMetricCard
+                      title=""
+                      data={micro.historico}
+                      size="sm"
+                      accent={
+                        micro.percentualReprovacao > 50 
+                          ? 'rose' 
+                          : micro.percentualReprovacao > 25 
+                          ? 'amber' 
+                          : 'emerald'
+                      }
+                      loading={false}
+                      showStats={false}
+                      valueFormatter={(v) => `${Math.round(v)}%`}
+                      dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+                    />
+                  </div>
+                )}
+
+                {/* Lista de produtos */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {micro.produtos.map((prod) => (
+                    <div key={prod.nome} className="bg-gray-50 rounded p-2 text-sm">
+                      <p className="font-medium text-gray-800">{prod.nome}</p>
+                      <p className="text-xs text-gray-600">Clique para detalhes</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -363,7 +561,7 @@ export function DashboardPage() {
               return (
                 <div
                   key={cat.categoria}
-                  onClick={() => carregarAnalisesDetalhe(cat.categoria)}
+                  onClick={() => carregarMicroorganismos(cat.categoria)}
                   className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border-l-4 ${style.border} cursor-pointer`}
                 >
                   <div className="flex items-start justify-between mb-3">
