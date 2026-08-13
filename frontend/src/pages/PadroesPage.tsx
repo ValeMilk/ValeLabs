@@ -83,9 +83,16 @@ export function PadroesPage() {
 
   const abrirEditar = (padrao: Padrao) => {
     setEditando(padrao);
+    // Se for um ID (24+ caracteres hex), busca o ID real; senão trata como nome antigo
+    let microId = padrao.microrganismo;
+    if (microId.length < 24) {
+      // É um nome, não um ID - procura o micro com esse nome
+      const micro = microrganismos.find(m => m.nome === microId);
+      microId = micro?._id || padrao.microrganismo;
+    }
     setFormData({
       categoria: padrao.categoria,
-      microrganismo: padrao.microrganismo,
+      microrganismo: microId,
       limiteMinimo: padrao.limiteMinimo.toString(),
       limiteMaximo: padrao.limiteMaximo.toString(),
       unidade: padrao.unidade,
@@ -143,6 +150,17 @@ export function PadroesPage() {
     : padroes;
 
   const categorias = [...new Set(padroes.map(p => p.categoria))];
+
+  // Função para obter nome do microrganismo pelo ID
+  const getNomeMicrorganismo = (microrganismoId: string): string => {
+    // Se não for um ObjectId (tem menos de 24 caracteres ou não é hex), é o nome
+    if (microrganismoId.length < 24) {
+      return microrganismoId;
+    }
+    
+    const micro = microrganismos.find(m => m._id === microrganismoId);
+    return micro?.nome || microrganismoId;
+  };
 
   if (carregando) {
     return <div className="p-8 text-center">Carregando...</div>;
@@ -222,7 +240,7 @@ export function PadroesPage() {
               padroesFiltrados.map((padrao) => (
                 <tr key={padrao._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{padrao.categoria}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{padrao.microrganismo}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{getNomeMicrorganismo(padrao.microrganismo)}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{padrao.limiteMinimo} {padrao.unidade}</td>
                   <td className="px-6 py-4 text-sm text-gray-700">{padrao.limiteMaximo} {padrao.unidade}</td>
                   <td className="px-6 py-4 text-sm">
