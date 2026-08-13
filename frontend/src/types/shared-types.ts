@@ -103,7 +103,7 @@ export interface CriarPadraoRequest {
 }
 
 export interface Produto {
-  _id?: string;
+  _id: string;
   nome: string;
   categoria: string;
   descricao: string;
