@@ -982,7 +982,7 @@ app.post("/api/análises", autenticar, async (req, res) => {
 });
 
 // ========== ERROR HANDLER ==========
-app.use((err: any, req: any, res: any) => {
+app.use((err: any, req: any, res: any, next: any) => {
   console.error("Erro:", err);
   res.status(500).json({ sucesso: false, mensagem: err.message || "Erro interno" });
 });
