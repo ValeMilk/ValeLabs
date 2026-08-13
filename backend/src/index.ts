@@ -919,6 +919,117 @@ app.delete("/api/produtos/:id", autenticar, autorizarQualidade, async (req, res)
   }
 });
 
+// ========== ENDPOINTS ANÁLISES ==========
+
+// GET análises com filtros e paginação
+app.get("/api/análises", autenticar, async (req, res) => {
+  try {
+    const { categoria, microrganismo, produtoId, statusConformidade, statusCiclo, limite, pagina } = req.query;
+    
+    const limits = parseInt(limite as string) || 50;
+    const page = parseInt(pagina as string) || 1;
+    const skip = (page - 1) * limits;
+
+    // Construir filtro
+    const query: any = {};
+    if (categoria) query.categoria = categoria as string;
+    if (microrganismo) query.microrganismo = microrganismo as string;
+    if (produtoId) query.produtoId = produtoId as string;
+    if (statusConformidade) query.statusConformidade = statusConformidade as string;
+    if (statusCiclo) query.statusCiclo = statusCiclo as string;
+
+    // Buscar análises
+    const [analises, total] = await Promise.all([
+      Analise.find(query)
+        .sort({ dataInoculacao: -1 })
+        .skip(skip)
+        .limit(limits)
+        .lean(),
+      Analise.countDocuments(query)
+    ]);
+
+    res.json({
+      sucesso: true,
+      mensagem: "Análises carregadas",
+      dados: {
+        dados: analises,
+        total,
+        pagina: page,
+        limite: limits,
+        totalPaginas: Math.ceil(total / limits)
+      }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// POST criar análise
+app.post("/api/análises", autenticar, async (req, res) => {
+  try {
+    const { categoria, produto, microrganismo, pontoColeta, resultado, dataInoculacao, dataPrevistaLeitura } = req.body;
+    const usuarioId = (req as any).usuario?.id;
+    const usuarioNome = (req as any).usuario?.nome;
+
+    if (!categoria || !produto || !microrganismo || !pontoColeta) {
+      return res.status(400).json({
+        sucesso: false,
+        mensagem: "Categoria, produto, microrganismo e ponto de coleta são obrigatórios"
+      });
+    }
+
+    // Buscar o padrão para esta combinação
+    const padrao = await Padrao.findOne({
+      categoria,
+      microrganismo,
+      ativo: true
+    });
+
+    // Determinar status de conformidade
+    let statusConformidade = "PENDENTE";
+    if (resultado !== null && resultado !== undefined && padrao) {
+      if (resultado >= padrao.limiteMinimo && resultado <= padrao.limiteMaximo) {
+        statusConformidade = "APROVADO";
+      } else {
+        statusConformidade = "REPROVADO";
+      }
+    } else if (!padrao) {
+      statusConformidade = "SEM_PADRÃO";
+    }
+
+    const analise = new Analise({
+      dataInoculacao: new Date(dataInoculacao) || new Date(),
+      dataPrevistaLeitura: new Date(dataPrevistaLeitura) || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      dataRealLeitura: null,
+      produtoId: produto,
+      categoria,
+      pontoColeta,
+      microrganismo,
+      resultado: resultado || null,
+      statusCiclo: "inoculada",
+      statusConformidade,
+      padraoVigenteId: padrao?._id || null,
+      padraoVigenteSnapshot: padrao ? {
+        limiteMinimo: padrao.limiteMinimo,
+        limiteMaximo: padrao.limiteMaximo,
+        unidade: padrao.unidade,
+        criticidade: padrao.criticidade
+      } : null,
+      criadoPor: usuarioNome || "Sistema"
+    });
+
+    await analise.save();
+
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Análise lançada com sucesso",
+      dados: analise
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
 // ========== ERROR HANDLER ==========
 app.use((err: any, req: any, res: any) => {
   console.error("Erro:", err);
