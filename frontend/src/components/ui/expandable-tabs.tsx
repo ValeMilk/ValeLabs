@@ -47,8 +47,6 @@ const spanVariants = {
   exit: { width: 0, opacity: 0 },
 };
 
-const transition = { delay: 0.1, type: 'spring', bounce: 0, duration: 0.6 };
-
 export function ExpandableTabs({
   tabs,
   className,
@@ -57,7 +55,7 @@ export function ExpandableTabs({
   selected: controlledSelected,
 }: ExpandableTabsProps) {
   const [selected, setSelected] = React.useState<number | null>(controlledSelected ?? null);
-  const outsideClickRef = React.useRef(null);
+  const outsideClickRef = React.useRef<HTMLDivElement>(null);
 
   // Sync controlled selected prop
   React.useEffect(() => {
@@ -102,7 +100,7 @@ export function ExpandableTabs({
             animate="animate"
             custom={selected === index}
             onClick={() => handleSelect(index)}
-            transition={transition}
+            transition={{ delay: 0.1, type: 'spring', bounce: 0, duration: 0.6 } as any}
             className={cn(
               'relative flex items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors duration-300',
               selected === index
@@ -118,7 +116,7 @@ export function ExpandableTabs({
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  transition={transition}
+                  transition={{ delay: 0.1, type: 'spring', bounce: 0, duration: 0.6 } as any}
                   className="overflow-hidden"
                 >
                   {tab.title}
