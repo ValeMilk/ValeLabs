@@ -57,11 +57,16 @@ export function LancamentosPage() {
         api.get('/produtos'),
         api.get('/padroes'),
       ]);
+      
+      console.log('Dados Padrões recebidos:', resPadroes.data);
+      console.log('Dados Produtos recebidos:', resProdutos.data);
+      
       setAnalises(resAnalises.data.dados?.dados || []);
       setProdutos(resProdutos.data.dados || []);
       setPadroes(resPadroes.data.dados || []);
       setErro('');
     } catch (err: any) {
+      console.error('Erro ao carregar dados:', err.message, err.response?.data);
       setErro(err.response?.data?.mensagem || 'Erro ao carregar dados');
     } finally {
       setCarregando(false);
@@ -261,6 +266,12 @@ export function LancamentosPage() {
 
       {erro && (
         <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">{erro}</div>
+      )}
+
+      {padroes.length === 0 && !carregando && (
+        <div className="mb-4 p-4 bg-yellow-50 text-yellow-700 rounded-lg">
+          ⚠️ Nenhum Padrão encontrado. Verifique o console (F12) para mais detalhes.
+        </div>
       )}
 
       {mensagem && (
