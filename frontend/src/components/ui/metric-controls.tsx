@@ -64,9 +64,9 @@ export function PeriodSelect({
       style={{ color: accentText }}
     >
       {options.map((option) => (
-        <key key={option.label} value={option.label}>
+        <option key={option.label} value={option.label}>
           {option.label}
-        </key>
+        </option>
       ))}
     </select>
   );
