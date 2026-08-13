@@ -942,7 +942,7 @@ app.get("/api/analises", autenticar, async (req, res) => {
 
     return res.json({
       sucesso: true,
-      dados: { dados: analises, total, pagina, limite }
+      dados: analises
     });
   } catch (erro: any) {
     return res.status(500).json({ sucesso: false, erro: erro.message });
