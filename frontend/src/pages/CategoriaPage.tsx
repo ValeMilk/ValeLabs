@@ -42,15 +42,30 @@ export function CategoriaPage() {
   const carregarDados = async () => {
     try {
       setCarregando(true);
-      const response = await api.get<any>('/produtos');
-      const produtosData = response.data.dados || [];
+      const [produtosRes, padroesRes] = await Promise.all([
+        api.get<any>('/produtos'),
+        api.get<any>('/padroes')
+      ]);
+      
+      const produtosData = produtosRes.data.dados || [];
+      const padroesData = padroesRes.data.dados || [];
+      
       setProdutos(produtosData);
       
-      const cats = Array.from(new Set(produtosData.map((p: Produto) => p.categoria))) as string[];
-      setCategorias(cats);
+      // Extrair categorias de produtos
+      const catsProdutos = Array.from(new Set(produtosData.map((p: Produto) => p.categoria))) as string[];
       
-      if (cats.length > 0 && !filtroCategoria) {
-        setFiltroCategoria(cats[0]);
+      // Extrair categorias de padrões
+      const catsPadroes = Array.from(new Set(padroesData.map((p: any) => p.categoria))) as string[];
+      
+      // Combinar e remover duplicatas
+      const catsCombinadas = Array.from(new Set([...catsProdutos, ...catsPadroes])) as string[];
+      catsCombinadas.sort();
+      
+      setCategorias(catsCombinadas);
+      
+      if (catsCombinadas.length > 0 && !filtroCategoria) {
+        setFiltroCategoria(catsCombinadas[0]);
       }
       setErro('');
     } catch (err: any) {
