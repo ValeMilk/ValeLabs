@@ -738,20 +738,28 @@ export function DashboardPage() {
                     </div>
 
                     {/* Mini gráfico de barras */}
-                    <div className="flex items-end gap-2 h-20 mb-3">
-                      <div className="flex-1 flex flex-col items-center">
+                    <div className="flex items-end justify-center gap-4 h-24 mb-3">
+                      <div className="flex flex-col items-center flex-1 h-full">
                         <div 
-                          className="w-full bg-green-500 rounded-t transition-all"
-                          style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%` }}
+                          className="w-full bg-green-500 rounded-t-sm transition-all flex-shrink-0"
+                          style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%`, minHeight: '6px' }}
                         ></div>
-                        <p className="text-xs font-bold text-green-600 mt-1">{aprovados}</p>
                       </div>
-                      <div className="flex-1 flex flex-col items-center">
+                      <div className="flex flex-col items-center flex-1 h-full">
                         <div 
-                          className="w-full bg-red-500 rounded-t transition-all"
-                          style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%` }}
+                          className="w-full bg-red-500 rounded-t-sm transition-all flex-shrink-0"
+                          style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%`, minHeight: '6px' }}
                         ></div>
-                        <p className="text-xs font-bold text-red-600 mt-1">{reprovados}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Labels das barras */}
+                    <div className="flex justify-center gap-4 mb-3">
+                      <div className="flex flex-col items-center">
+                        <p className="text-xs font-bold text-green-600">{aprovados}</p>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <p className="text-xs font-bold text-red-600">{reprovados}</p>
                       </div>
                     </div>
 
