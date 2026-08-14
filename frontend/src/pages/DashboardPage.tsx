@@ -181,7 +181,8 @@ export function DashboardPage() {
       // Histórico: CADA ANÁLISE = 1 PONTO (resultado individual)
       analises.forEach((analise: any) => {
         const microNome = analise.microrganismo || 'Desconhecido';
-        const data = analise.dataInoculacao ? new Date(analise.dataInoculacao).toLocaleDateString('pt-BR') : 'sem data';
+        // Manter data em ISO format para que dateFormatter possa formatar
+        const data = analise.dataInoculacao ? analise.dataInoculacao : new Date().toISOString();
         const resultado = parseFloat(analise.resultado ?? 0);
         
         // Adicionar ponto ao histórico (cada análise é um ponto)
