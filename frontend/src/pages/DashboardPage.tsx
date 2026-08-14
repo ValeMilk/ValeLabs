@@ -465,154 +465,135 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* SIDEBAR */}
-      <motion.aside
-        initial={{ x: -280 }}
-        animate={{ x: 0 }}
-        className="w-72 bg-white border-r border-gray-200 overflow-y-auto sticky top-0 h-screen shadow-sm"
-      >
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-lg font-bold text-gray-900">Vale<span className="text-blue-600">Milk</span></h1>
-          <p className="text-xs text-gray-500 mt-1">Acompanhamento Microbiológico</p>
-        </div>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-8 py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            {categoriaSelecionada && (
+              <motion.button
+                whileHover={{ x: -4 }}
+                onClick={() => {
+                  if (produtoSelecionado) {
+                    setProdutoSelecionado(null);
+                  } else {
+                    setCategoriaSelecionada(null);
+                  }
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft size={18} />
+                Voltar
+              </motion.button>
+            )}
+          </div>
 
-        {/* KPI Mini */}
-        <div className="px-4 py-4 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Resumo Geral</p>
-          <div className="space-y-2">
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-              <p className="text-xs text-gray-600">Total de Análises</p>
-              <p className="text-2xl font-bold text-blue-600">{totalAnalises}</p>
+          {!categoriaSelecionada && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Acompanhamento Microbiológico</h1>
+              <p className="text-gray-600">Categorias · Produtos · Microrganismos</p>
+            </>
+          )}
+          {categoriaSelecionada && !produtoSelecionado && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{categoriaSelecionada}</h1>
+              <p className="text-gray-600">Produtos desta categoria</p>
+            </>
+          )}
+          {categoriaSelecionada && produtoSelecionado && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{produtoSelecionado}</h1>
+              <p className="text-gray-600">{categoriaSelecionada} · Microrganismos</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* NÍVEL 1: Categorias */}
+      {!categoriaSelecionada && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="max-w-7xl mx-auto px-8 py-12"
+        >
+          <div className="grid grid-cols-4 gap-6 mb-12">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Total</p>
+              <p className="text-3xl font-bold text-blue-600">{totalAnalises}</p>
+              <p className="text-xs text-gray-600 mt-2">análises</p>
             </div>
-            <div className="bg-green-50 rounded-lg p-3 border border-green-100">
-              <p className="text-xs text-gray-600">Aprovadas</p>
-              <p className="text-xl font-bold text-green-600">{totalAprovadas}</p>
+            <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
+              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Crítico</p>
+              <p className="text-3xl font-bold text-red-600">
+                {categorias.filter(c => c.criticidade === Criticidade.CRÍTICO).length}
+              </p>
             </div>
-            <div className="bg-red-50 rounded-lg p-3 border border-red-100">
-              <p className="text-xs text-gray-600">Reprovadas</p>
-              <p className="text-xl font-bold text-red-600">{totalReprovadas}</p>
+            <div className="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6">
+              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Atenção</p>
+              <p className="text-3xl font-bold text-amber-600">
+                {categorias.filter(c => c.criticidade === Criticidade.ATENÇÃO).length}
+              </p>
+            </div>
+            <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-6">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Conforme</p>
+              <p className="text-3xl font-bold text-green-600">
+                {categorias.filter(c => c.criticidade === Criticidade.CONFORME).length}
+              </p>
             </div>
           </div>
-        </div>
 
-        {/* Categorias Menu */}
-        <div className="px-3 py-4">
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 mb-3">Categorias</p>
-          <div className="space-y-1">
-            {categoriasOrdenadas.map((cat) => {
-              const config = getCriticidadeConfig(cat.criticidade);
-              return (
-                <motion.button
-                  key={cat.categoria}
-                  whileHover={{ x: 4 }}
-                  onClick={() => {
-                    carregarProdutos(cat.categoria);
-                    setCategoriaSelecionada(cat.categoria);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg border-l-4 transition-all ${config.color} hover:shadow-sm ${
-                    categoriaSelecionada === cat.categoria ? 'bg-white shadow-sm' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${config.dot}`}></div>
-                    <span className="text-sm font-medium text-gray-900">{cat.categoria}</span>
-                  </div>
-                  <div className="text-xs text-gray-600 ml-4">
-                    {cat.lidas > 0 ? Math.round((cat.aprovadas / cat.lidas) * 100) : 0}% aprovação
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      </motion.aside>
-
-      {/* MAIN */}
-      <main className="flex-1 overflow-y-auto">
-        {/* NÍVEL 1: Macro */}
-        {!categoriaSelecionada && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-8 max-w-7xl"
-          >
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Visão Geral</h2>
-              <p className="text-gray-600">Acompanhamento microbiológico de todas as categorias</p>
+          {categorias.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
+              <Beaker className="mx-auto text-gray-400 mb-4" size={48} />
+              <p className="text-gray-700 font-medium text-lg">Nenhuma categoria encontrada</p>
             </div>
-
-            {/* KPI Grid */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Categorias</p>
-                <p className="text-3xl font-bold text-gray-900">{categorias.length}</p>
-              </div>
-              <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
-                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Crítico</p>
-                <p className="text-3xl font-bold text-red-600">
-                  {categorias.filter(c => c.criticidade === Criticidade.CRÍTICO).length}
-                </p>
-              </div>
-              <div className="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6">
-                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Atenção</p>
-                <p className="text-3xl font-bold text-amber-600">
-                  {categorias.filter(c => c.criticidade === Criticidade.ATENÇÃO).length}
-                </p>
-              </div>
-              <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-6">
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Conforme</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {categorias.filter(c => c.criticidade === Criticidade.CONFORME).length}
-                </p>
-              </div>
-            </div>
-
-            {/* Categorias Grid */}
-            {categorias.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
-                <Beaker className="mx-auto text-gray-400 mb-4" size={48} />
-                <p className="text-gray-700 font-medium text-lg">Nenhuma categoria encontrada</p>
-                <p className="text-sm text-gray-500 mt-2">Cadastre lançamentos para popular o dashboard</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-6">
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Categorias</h2>
+              <div className="grid grid-cols-4 gap-4">
                 {categoriasOrdenadas.map((cat) => {
                   const config = getCriticidadeConfig(cat.criticidade);
                   const taxaAprovacao = cat.lidas > 0 ? Math.round((cat.aprovadas / cat.lidas) * 100) : 0;
+                  const piorAnalise = cat.totalAnalises > 0 
+                    ? `${cat.reprovadas} reprovada(s)` 
+                    : 'sem dados';
+
                   return (
                     <motion.div
                       key={cat.categoria}
-                      whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+                      whileHover={{ y: -6, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
                       onClick={() => {
                         carregarProdutos(cat.categoria);
                         setCategoriaSelecionada(cat.categoria);
                       }}
-                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 cursor-pointer transition-all ${config.color}`}
+                      className={`bg-white rounded-lg shadow-sm border-l-4 p-5 cursor-pointer transition-all ${config.color}`}
                     >
-                      <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h3 className="text-xl font-bold text-gray-900">{cat.categoria}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{cat.totalAnalises} análise(s)</p>
+                          <h3 className="font-semibold text-gray-900">{cat.categoria}</h3>
+                          <p className="text-xs text-gray-600 mt-1">{cat.totalAnalises} análise(s)</p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.text} bg-white border border-current/20`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${config.text}`}>
                           {config.label}
                         </span>
                       </div>
 
-                      {/* Progress Bar */}
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-600 font-medium mb-1">Pior: <span className="text-gray-900">{piorAnalise}</span></p>
+                      </div>
+
                       {cat.lidas > 0 && (
-                        <div className="mb-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-gray-600">Taxa de aprovação</span>
-                            <span className="text-sm font-bold text-gray-800">{taxaAprovacao}%</span>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-gray-600">Taxa aprovação</span>
+                            <span className="text-xs font-bold text-gray-800">{taxaAprovacao}%</span>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${taxaAprovacao}%` }}
-                              transition={{ duration: 0.8, ease: 'easeOut' }}
-                              className={`h-2 rounded-full ${
+                              transition={{ duration: 0.8 }}
+                              className={`h-1.5 rounded-full ${
                                 taxaAprovacao > 75 ? 'bg-green-500' : taxaAprovacao > 50 ? 'bg-amber-500' : 'bg-red-500'
                               }`}
                             />
@@ -620,120 +601,86 @@ export function DashboardPage() {
                         </div>
                       )}
 
-                      {/* Mini Stats */}
-                      <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-200">
+                      <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-3 gap-2">
                         <div>
-                          <p className="text-xs text-gray-600 font-medium">Aprovadas</p>
-                          <p className="text-lg font-bold text-green-600">{cat.aprovadas}</p>
+                          <p className="text-xs text-gray-600">Aprovadas</p>
+                          <p className="font-bold text-green-600">{cat.aprovadas}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600 font-medium">Reprovadas</p>
-                          <p className="text-lg font-bold text-red-600">{cat.reprovadas}</p>
+                          <p className="text-xs text-gray-600">Reprovadas</p>
+                          <p className="font-bold text-red-600">{cat.reprovadas}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600 font-medium">Aguardando</p>
-                          <p className="text-lg font-bold text-amber-600">{cat.aguardandoLeitura}</p>
+                          <p className="text-xs text-gray-600">Aguardando</p>
+                          <p className="font-bold text-amber-600">{cat.aguardandoLeitura}</p>
                         </div>
                       </div>
                     </motion.div>
                   );
                 })}
               </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* NÍVEL 2: Produtos */}
-        {categoriaSelecionada && !produtoSelecionado && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-8 max-w-7xl"
-          >
-            <div className="mb-6 flex items-center gap-3">
-              <motion.button
-                whileHover={{ x: -4 }}
-                onClick={() => setCategoriaSelecionada(null)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft size={18} />
-                Voltar
-              </motion.button>
-              <span className="text-gray-400">/</span>
-              <h2 className="text-2xl font-bold text-gray-900">{categoriaSelecionada}</h2>
             </div>
+          )}
+        </motion.div>
+      )}
 
-            {carregandoDetalhe ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : (
+      {/* NÍVEL 2: Produtos */}
+      {categoriaSelecionada && !produtoSelecionado && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="max-w-7xl mx-auto px-8 py-12"
+        >
+          {carregandoDetalhe ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Produtos</h2>
               <div className="grid grid-cols-3 gap-6">
-                {produtos.map((prod) => {
-                  const taxaAprovacao = prod.historico.length > 0
-                    ? Math.round(
-                        (prod.historico.filter(h => {
-                          const val = h.value;
-                          return val < 50;
-                        }).length / prod.historico.length) * 100
-                      )
-                    : 0;
-                  return (
-                    <motion.div
-                      key={prod.nome}
-                      whileHover={{ y: -4 }}
-                      onClick={() => {
-                        setProdutoSelecionado(prod.nome);
-                        carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
-                      }}
-                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all"
-                    >
-                      <h3 className="text-lg font-bold text-gray-900 mb-4">{prod.nome}</h3>
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-xs text-gray-600 font-medium mb-1">Taxa de Aprovação</p>
-                          <p className="text-3xl font-bold text-blue-600">{Math.round((100 - prod.percentualReprovacao))}%</p>
-                        </div>
-                        <Home size={32} className="text-gray-300" />
-                      </div>
-                      <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-600">
-                        {prod.historico.length} análise(s) registrada(s)
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {produtos.map((prod) => (
+                  <motion.div
+                    key={prod.nome}
+                    whileHover={{ y: -6 }}
+                    onClick={() => {
+                      setProdutoSelecionado(prod.nome);
+                      carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
+                    }}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all"
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">{prod.nome}</h3>
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-600 font-medium mb-1">Taxa de Aprovação</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {Math.round(100 - prod.percentualReprovacao)}%
+                      </p>
+                    </div>
+                    <div className="pt-4 border-t border-gray-200 text-xs text-gray-600">
+                      {prod.historico.length} análise(s)
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* NÍVEL 3: Microrganismos */}
-        {categoriaSelecionada && produtoSelecionado && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-8 max-w-7xl"
-          >
-            <div className="mb-6 flex items-center gap-3">
-              <motion.button
-                whileHover={{ x: -4 }}
-                onClick={() => setProdutoSelecionado(null)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft size={18} />
-                Voltar
-              </motion.button>
-              <span className="text-gray-400">/</span>
-              <span className="text-sm text-gray-600">{categoriaSelecionada}</span>
-              <span className="text-gray-400">/</span>
-              <h2 className="text-2xl font-bold text-gray-900">{produtoSelecionado}</h2>
             </div>
+          )}
+        </motion.div>
+      )}
 
-            {carregandoDetalhe ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : (
+      {/* NÍVEL 3: Microrganismos */}
+      {categoriaSelecionada && produtoSelecionado && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="max-w-7xl mx-auto px-8 py-12"
+        >
+          {carregandoDetalhe ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Microrganismos</h2>
               <div className="grid grid-cols-2 gap-6">
                 {microrganismos.map((micro) => (
                   <motion.div
@@ -762,10 +709,10 @@ export function DashboardPage() {
                   </motion.div>
                 ))}
               </div>
-            )}
-          </motion.div>
-        )}
-      </main>
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }
