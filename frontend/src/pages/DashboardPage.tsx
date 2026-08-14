@@ -53,6 +53,15 @@ export function DashboardPage() {
     carregarCategorias();
   }, []);
 
+  useEffect(() => {
+    console.log('🔄 Estado renderizado:', { 
+      categoriaSelecionada, 
+      produtoSelecionado, 
+      carregandoDetalhe,
+      microorganismosLength: microrganismos.length 
+    });
+  }, [categoriaSelecionada, produtoSelecionado, carregandoDetalhe, microrganismos]);
+
   const carregarCategorias = async () => {
     try {
       setCarregando(true);
@@ -427,6 +436,11 @@ export function DashboardPage() {
         return { color: 'bg-green-50 border-l-green-500', dot: 'bg-green-500', text: 'text-green-700', label: 'Conforme' };
     }
   };
+
+  // Debug: log antes de renderizar
+  if (categoriaSelecionada && produtoSelecionado) {
+    console.log('🎯 Renderizando Nível 3 agora!', { categoriaSelecionada, produtoSelecionado, microrganismos });
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
