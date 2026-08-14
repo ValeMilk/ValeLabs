@@ -737,28 +737,24 @@ export function DashboardPage() {
                       <p className="text-xs text-gray-600">{prod.microrganismos.length} microrganismo(s)</p>
                     </div>
 
-                    {/* Mini gráfico de barras */}
-                    <div className="flex items-end justify-center gap-4 h-24 mb-3">
-                      <div className="flex flex-col items-center flex-1 h-full">
-                        <div 
-                          className="w-full bg-green-500 rounded-t-sm transition-all flex-shrink-0"
-                          style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%`, minHeight: '6px' }}
-                        ></div>
-                      </div>
-                      <div className="flex flex-col items-center flex-1 h-full">
-                        <div 
-                          className="w-full bg-red-500 rounded-t-sm transition-all flex-shrink-0"
-                          style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%`, minHeight: '6px' }}
-                        ></div>
-                      </div>
+                    {/* Mini gráfico de barras - Coluna proporcional de baixo pra cima */}
+                    <div className="flex items-end justify-center gap-3 h-24 mb-3">
+                      <div 
+                        className="flex-1 bg-green-500 rounded-t-md transition-all"
+                        style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%`, minHeight: '4px' }}
+                      ></div>
+                      <div 
+                        className="flex-1 bg-red-500 rounded-t-md transition-all"
+                        style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%`, minHeight: '4px' }}
+                      ></div>
                     </div>
                     
-                    {/* Labels das barras */}
-                    <div className="flex justify-center gap-4 mb-3">
-                      <div className="flex flex-col items-center">
+                    {/* Labels das barras - Aprovadas e Reprovadas */}
+                    <div className="flex justify-center gap-3 mb-3">
+                      <div className="flex-1 text-center">
                         <p className="text-xs font-bold text-green-600">{aprovados}</p>
                       </div>
-                      <div className="flex flex-col items-center">
+                      <div className="flex-1 text-center">
                         <p className="text-xs font-bold text-red-600">{reprovados}</p>
                       </div>
                     </div>
