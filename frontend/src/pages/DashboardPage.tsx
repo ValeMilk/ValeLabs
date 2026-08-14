@@ -178,46 +178,38 @@ export function DashboardPage() {
       
       console.log('📊 Nível 3 - Microrganismos encontrados:', Object.keys(agrupadoMicro));
       
-      // Histórico por microrganismo e data
-      const historicoMicro: Record<string, Record<string, { total: number; reprovados: number }>> = {};
-      
+      // Histórico: CADA ANÁLISE = 1 PONTO (resultado individual)
       analises.forEach((analise: any) => {
         const microNome = analise.microrganismo || 'Desconhecido';
         const data = analise.dataInoculacao ? new Date(analise.dataInoculacao).toLocaleDateString('pt-BR') : 'sem data';
+        const resultado = parseFloat(analise.resultado ?? 0);
         
-        if (!historicoMicro[microNome]) historicoMicro[microNome] = {};
-        if (!historicoMicro[microNome][data]) {
-          historicoMicro[microNome][data] = { total: 0, reprovados: 0 };
-        }
-        
-        historicoMicro[microNome][data].total += 1;
-        if (analise.statusConformidade === 'REPROVADO') {
-          historicoMicro[microNome][data].reprovados += 1;
-        }
+        // Adicionar ponto ao histórico (cada análise é um ponto)
+        agrupadoMicro[microNome].historico.push({
+          value: resultado,
+          date: data
+        });
       });
       
-      console.log('📊 Nível 3 - Histórico por micro:', historicoMicro);
+      console.log('📊 Nível 3 - Histórico (pontos por análise):', agrupadoMicro);
       
+      // Calcular percentualReprovacao e ordenar histórico
       Object.keys(agrupadoMicro).forEach((microNome) => {
-        const historicoDatas = historicoMicro[microNome] || {};
-        const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
-          ([data, { reprovados, total }]) => ({
-            value: total > 0 ? (reprovados / total) * 100 : 0,
-            date: data,
-          })
-        );
-        
-        const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
-        const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
-        
-        agrupadoMicro[microNome].historico = historico.sort((a, b) => 
+        // Ordenar histórico por data
+        agrupadoMicro[microNome].historico = agrupadoMicro[microNome].historico.sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
         );
-        agrupadoMicro[microNome].percentualReprovacao = totalAnalises > 0 
-          ? (totalReprovados / totalAnalises) * 100 
+        
+        // Calcular percentualReprovacao do microrganismo
+        const analisesDoMicro = analises.filter(a => a.microrganismo === microNome);
+        const totalReprovados = analisesDoMicro.filter(a => a.statusConformidade === 'REPROVADO').length;
+        const total = analisesDoMicro.length;
+        
+        agrupadoMicro[microNome].percentualReprovacao = total > 0 
+          ? (totalReprovados / total) * 100 
           : 0;
         
-        console.log(`📊 Nível 3 - ${microNome}: ${agrupadoMicro[microNome].historico.length} pontos, ${agrupadoMicro[microNome].percentualReprovacao.toFixed(1)}% reprovação`);
+        console.log(`📊 Nível 3 - ${microNome}: ${agrupadoMicro[microNome].historico.length} análises, ${agrupadoMicro[microNome].percentualReprovacao.toFixed(1)}% reprovação`);
       });
       
       setMicrorganismos(Object.values(agrupadoMicro));
@@ -309,9 +301,9 @@ export function DashboardPage() {
                     : 'emerald'
                 }
                 loading={carregandoDetalhe}
-                valueFormatter={(v) => `${Math.round(v)}%`}
+                valueFormatter={(v) => `${v.toFixed(1)}`}
                 dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-                unit="%"
+                unit=""
               />
             ))}
           </div>
