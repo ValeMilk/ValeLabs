@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SeriesPoint {
   value: number;
@@ -38,6 +39,16 @@ interface MicroorganismoData {
   mediaResultado?: number; // Média dos resultados para exibição
 }
 
+interface TabelaRow {
+  produto: string;
+  microrganismo: string;
+  avaliadas: number;
+  aprovadas: number;
+  reprovadas: number;
+  percentualReprovacao: number;
+  prioridade: 'ALTA' | 'MÉDIA' | 'BAIXA';
+}
+
 export function DashboardPage() {
   const [categorias, setCategorias] = useState<DashboardCategoria[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -47,11 +58,72 @@ export function DashboardPage() {
   const [produtos, setProdutos] = useState<ProdutoData[]>([]);
   const [microrganismos, setMicrorganismos] = useState<MicroorganismoData[]>([]);
   const [carregandoDetalhe, setCarregandoDetalhe] = useState(false);
+  
+  // Tabela ordenável
+  const [tabelaDados, setTabelaDados] = useState<TabelaRow[]>([]);
+  const [sortColumn, setSortColumn] = useState<keyof TabelaRow>('produto');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     carregarCategorias();
+    carregarTabelaDados();
   }, []);
+
+  // Carregar dados para a tabela inicial
+  const carregarTabelaDados = async () => {
+    try {
+      const response = await api.get('/analises');
+      const analises = response.data.dados || [];
+      
+      // Agrupar por produto + microrganismo
+      const agrupadoTabela: Record<string, TabelaRow> = {};
+      
+      analises.forEach((analise: any) => {
+        const produto = analise.produtoNome || 'Sem produto';
+        const micro = analise.microrganismo || 'Desconhecido';
+        const chave = `${produto}|${micro}`;
+        
+        if (!agrupadoTabela[chave]) {
+          agrupadoTabela[chave] = {
+            produto,
+            microrganismo: micro,
+            avaliadas: 0,
+            aprovadas: 0,
+            reprovadas: 0,
+            percentualReprovacao: 0,
+            prioridade: 'BAIXA'
+          };
+        }
+        
+        agrupadoTabela[chave].avaliadas += 1;
+        if (analise.statusConformidade === 'APROVADO') {
+          agrupadoTabela[chave].aprovadas += 1;
+        } else if (analise.statusConformidade === 'REPROVADO') {
+          agrupadoTabela[chave].reprovadas += 1;
+        }
+      });
+      
+      // Calcular percentual e prioridade
+      const tabelaDadosCalculado = Object.values(agrupadoTabela).map(row => {
+        const percentual = row.avaliadas > 0 ? (row.reprovadas / row.avaliadas) * 100 : 0;
+        let prioridade: 'ALTA' | 'MÉDIA' | 'BAIXA' = 'BAIXA';
+        if (percentual > 50) prioridade = 'ALTA';
+        else if (percentual > 25) prioridade = 'MÉDIA';
+        
+        return {
+          ...row,
+          percentualReprovacao: percentual,
+          prioridade
+        };
+      });
+      
+      setTabelaDados(tabelaDadosCalculado);
+    } catch (err: any) {
+      console.error('Erro ao carregar dados da tabela:', err);
+    }
+  };
 
   useEffect(() => {
     console.log('🔄 Estado renderizado:', { 
@@ -298,6 +370,62 @@ export function DashboardPage() {
     }
   };
 
+  // Ordenar dados da tabela
+  const tabelaDadosOrdenados = [...tabelaDados].sort((a, b) => {
+    const aVal = a[sortColumn];
+    const bVal = b[sortColumn];
+    
+    if (typeof aVal === 'string') {
+      return sortDirection === 'asc' 
+        ? (aVal as string).localeCompare(bVal as string)
+        : (bVal as string).localeCompare(aVal as string);
+    }
+    
+    if (typeof aVal === 'number') {
+      return sortDirection === 'asc'
+        ? (aVal as number) - (bVal as number)
+        : (bVal as number) - (aVal as number);
+    }
+    
+    return 0;
+  });
+
+  const handleSort = (column: keyof TabelaRow) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getPrioridadeStyle = (prioridade: string) => {
+    switch (prioridade) {
+      case 'ALTA':
+        return 'bg-red-50 border-l-red-500';
+      case 'MÉDIA':
+        return 'bg-amber-50 border-l-amber-500';
+      default:
+        return 'bg-green-50 border-l-green-500';
+    }
+  };
+
+  const TableHeader = ({ column, label }: { column: keyof TabelaRow; label: string }) => (
+    <th 
+      onClick={() => handleSort(column)}
+      className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+    >
+      <div className="flex items-center gap-2">
+        {label}
+        {sortColumn === column && (
+          sortDirection === 'asc' 
+            ? <ChevronUp size={16} className="text-blue-600" />
+            : <ChevronDown size={16} className="text-blue-600" />
+        )}
+      </div>
+    </th>
+  );
+
 
 
   if (carregando) {
@@ -417,6 +545,74 @@ export function DashboardPage() {
               </p>
             </div>
           </div>
+
+          {/* TABELA ORDENÁVEL - Produtos × Microrganismos */}
+          {tabelaDados.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-4">
+                Acompanhamento de Produtos e Microrganismos
+              </h2>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <TableHeader column="produto" label="Produto" />
+                        <TableHeader column="microrganismo" label="Microrganismo" />
+                        <TableHeader column="avaliadas" label="Avaliadas" />
+                        <TableHeader column="aprovadas" label="Aprovadas" />
+                        <TableHeader column="reprovadas" label="Reprovadas" />
+                        <TableHeader column="percentualReprovacao" label="% Reprovação" />
+                        <TableHeader column="prioridade" label="Prioridade" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tabelaDadosOrdenados.map((row, idx) => (
+                        <tr 
+                          key={`${row.produto}-${row.microrganismo}`}
+                          className={`border-b border-gray-200 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors border-l-4 ${getPrioridadeStyle(row.prioridade)}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {row.produto}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {row.microrganismo}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-center">
+                            {row.avaliadas}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 text-center">
+                            {row.aprovadas}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 text-center">
+                            {row.reprovadas}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                              row.prioridade === 'ALTA' ? 'bg-red-100 text-red-700' :
+                              row.prioridade === 'MÉDIA' ? 'bg-amber-100 text-amber-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {row.percentualReprovacao.toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              row.prioridade === 'ALTA' ? 'bg-red-100 text-red-700' :
+                              row.prioridade === 'MÉDIA' ? 'bg-amber-100 text-amber-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {row.prioridade}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
           {categorias.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
