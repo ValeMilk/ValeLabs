@@ -27,6 +27,7 @@ interface MicroorganismoData {
   nome: string;
   percentualReprovacao: number;
   historico: SeriesPoint[];
+  mediaResultado?: number; // Média dos resultados para exibição
 }
 
 export function DashboardPage() {
@@ -210,7 +211,13 @@ export function DashboardPage() {
           ? (totalReprovados / total) * 100 
           : 0;
         
-        console.log(`📊 Nível 3 - ${microNome}: ${agrupadoMicro[microNome].historico.length} análises, ${agrupadoMicro[microNome].percentualReprovacao.toFixed(1)}% reprovação`);
+        // Calcular média dos resultados
+        const somaResultados = agrupadoMicro[microNome].historico.reduce((acc, ponto) => acc + ponto.value, 0);
+        agrupadoMicro[microNome].mediaResultado = agrupadoMicro[microNome].historico.length > 0
+          ? somaResultados / agrupadoMicro[microNome].historico.length
+          : 0;
+        
+        console.log(`📊 Nível 3 - ${microNome}: ${agrupadoMicro[microNome].historico.length} análises, ${agrupadoMicro[microNome].percentualReprovacao.toFixed(1)}% reprovação, média: ${agrupadoMicro[microNome].mediaResultado?.toFixed(1)}`);
       });
       
       setMicrorganismos(Object.values(agrupadoMicro));
@@ -292,6 +299,7 @@ export function DashboardPage() {
               <ProgressMetricCard
                 key={micro.nome}
                 title={micro.nome}
+                total={micro.mediaResultado?.toFixed(1)}
                 data={micro.historico}
                 size="md"
                 accent={
