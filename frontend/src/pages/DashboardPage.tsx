@@ -13,7 +13,6 @@ import {
   Beaker,
   ArrowLeft,
   Home,
-  ArrowUp,
 } from 'lucide-react';
 import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
 import { motion } from 'framer-motion';
@@ -637,114 +636,61 @@ export function DashboardPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {/* Status badges */}
-              <div className="flex gap-4 mb-6">
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle size={20} className="text-green-600" />
-                  <span className="font-bold text-green-600">{produtos.filter(p => p.percentualReprovacao < 25).length}</span>
-                  <span className="text-sm text-green-700">Aprovado(s)</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle size={20} className="text-red-600" />
-                  <span className="font-bold text-red-600">{produtos.filter(p => p.percentualReprovacao >= 50).length}</span>
-                  <span className="text-sm text-red-700">Crítico(s)</span>
-                </div>
-              </div>
+            <div className="grid grid-cols-4 gap-6">
+              {produtos.map((prod) => {
+                const aprovados = prod.historico.filter(h => h.value < 50).length;
+                const reprovados = prod.historico.filter(h => h.value >= 50).length;
+                const total = prod.historico.length;
+                const percentualReprovacao = prod.percentualReprovacao;
+                
+                let criticidade: 'alta' | 'media' | 'ok' = 'ok';
+                if (percentualReprovacao > 50) criticidade = 'alta';
+                else if (percentualReprovacao > 25) criticidade = 'media';
+                
+                const borderColor = criticidade === 'alta' ? 'border-l-red-500' : criticidade === 'media' ? 'border-l-amber-500' : 'border-l-green-500';
 
-              {/* Cards de produtos */}
-              <div className="space-y-4">
-                {produtos.map((prod) => {
-                  const percentualReprovacao = prod.percentualReprovacao;
-                  let criticidade: 'alta' | 'media' | 'ok' = 'ok';
-                  if (percentualReprovacao > 50) criticidade = 'alta';
-                  else if (percentualReprovacao > 25) criticidade = 'media';
-                  
-                  const colorConfigs: Record<'alta' | 'media' | 'ok', any> = {
-                    alta: { border: 'border-l-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-700' },
-                    media: { border: 'border-l-amber-500', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
-                    ok: { border: 'border-l-green-500', bg: 'bg-green-50', badge: 'bg-green-100 text-green-700' }
-                  };
-                  const colorConfig = colorConfigs[criticidade];
+                return (
+                  <motion.div
+                    key={prod.nome}
+                    whileHover={{ y: -6, boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)' }}
+                    onClick={() => {
+                      setProdutoSelecionado(prod.nome);
+                      carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
+                    }}
+                    className={`bg-white rounded-lg shadow-sm border-l-4 ${borderColor} p-5 cursor-pointer transition-all`}
+                  >
+                    <div className="mb-4">
+                      <h3 className="font-bold text-gray-900 mb-1">{prod.nome}</h3>
+                      <p className="text-xs text-gray-600">{prod.microrganismos.length} microrganismo(s)</p>
+                    </div>
 
-                  return (
-                    <motion.div
-                      key={prod.nome}
-                      whileHover={{ y: -2 }}
-                      onClick={() => {
-                        setProdutoSelecionado(prod.nome);
-                        carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
-                      }}
-                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 cursor-pointer hover:shadow-md transition-all ${colorConfig.border}`}
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-xl font-bold text-gray-900">{prod.nome}</h3>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {prod.microrganismos.length} microrganismo(s) | Taxa de reprovação: {percentualReprovacao.toFixed(1)}%
-                          </p>
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${colorConfig.badge}`}>
-                          {percentualReprovacao.toFixed(1)}%
-                        </div>
+                    {/* Mini gráfico de barras */}
+                    <div className="flex items-end gap-2 h-20 mb-3">
+                      <div className="flex-1 flex flex-col items-center">
+                        <div 
+                          className="w-full bg-green-500 rounded-t transition-all"
+                          style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%` }}
+                        ></div>
+                        <p className="text-xs font-bold text-green-600 mt-1">{aprovados}</p>
                       </div>
-
-                      {/* Gráfico miniatura */}
-                      <div className="h-32 mb-4 bg-gradient-to-br from-blue-50 to-transparent rounded p-3">
-                        {prod.historico && prod.historico.length > 0 ? (
-                          <svg className="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
-                            <defs>
-                              <linearGradient id={`grad-${prod.nome}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style={{stopColor: '#005EB8', stopOpacity: 0.3}} />
-                                <stop offset="100%" style={{stopColor: '#005EB8', stopOpacity: 0.05}} />
-                              </linearGradient>
-                            </defs>
-                            {/* Linha do gráfico */}
-                            <polyline
-                              points={prod.historico
-                                .map((p, i) => {
-                                  const x = (i / Math.max(1, prod.historico.length - 1)) * 300;
-                                  const y = 120 - (p.value / 100) * 120;
-                                  return `${x},${y}`;
-                                })
-                                .join(' ')}
-                              fill="none"
-                              stroke="#005EB8"
-                              strokeWidth="2"
-                            />
-                            {/* Pontos */}
-                            {prod.historico.map((p, i) => {
-                              const x = (i / Math.max(1, prod.historico.length - 1)) * 300;
-                              const y = 120 - (p.value / 100) * 120;
-                              return (
-                                <circle key={i} cx={x} cy={y} r="2" fill="#005EB8" />
-                              );
-                            })}
-                          </svg>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-400 text-sm">Sem dados</div>
-                        )}
+                      <div className="flex-1 flex flex-col items-center">
+                        <div 
+                          className="w-full bg-red-500 rounded-t transition-all"
+                          style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%` }}
+                        ></div>
+                        <p className="text-xs font-bold text-red-600 mt-1">{reprovados}</p>
                       </div>
+                    </div>
 
-                      {/* Stats rodapé */}
-                      <div className="flex gap-4 text-xs">
-                        <div>
-                          <p className="text-gray-600 font-medium">Aprovadas</p>
-                          <p className="text-lg font-bold text-green-600">{prod.historico.filter(h => h.value < 50).length}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600 font-medium">Reprovadas</p>
-                          <p className="text-lg font-bold text-red-600">{prod.historico.filter(h => h.value >= 50).length}</p>
-                        </div>
-                        <div className="ml-auto">
-                          <p className="text-gray-600 font-medium">Últimas 30 dias</p>
-                          <p className="text-sm text-gray-700">{prod.historico.length} análise(s)</p>
-                        </div>
+                    <div className="text-xs text-gray-600 border-t pt-2">
+                      <div className="flex justify-between">
+                        <span>Taxa reprovação:</span>
+                        <span className="font-bold text-gray-900">{percentualReprovacao.toFixed(1)}%</span>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -762,19 +708,8 @@ export function DashboardPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-8">
               {microrganismos.map((micro) => {
-                let criticidade: 'alta' | 'media' | 'ok' = 'ok';
-                if (micro.percentualReprovacao > 50) criticidade = 'alta';
-                else if (micro.percentualReprovacao > 25) criticidade = 'media';
-                
-                const colorConfigs: Record<'alta' | 'media' | 'ok', any> = {
-                  alta: { border: 'border-l-4 border-l-red-500', bg: 'bg-red-50', text: 'text-red-700', trend: 'text-red-600' },
-                  media: { border: 'border-l-4 border-l-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', trend: 'text-amber-600' },
-                  ok: { border: 'border-l-4 border-l-green-500', bg: 'bg-green-50', text: 'text-green-700', trend: 'text-green-600' }
-                };
-                const colorConfig = colorConfigs[criticidade];
-
                 const stats = micro.historico.length > 0
                   ? {
                       max: Math.max(...micro.historico.map(h => h.value)),
@@ -787,61 +722,82 @@ export function DashboardPage() {
 
                 const trend = stats.latest - stats.previous;
                 const trendPercent = stats.previous !== 0 ? ((trend / stats.previous) * 100).toFixed(1) : '0.0';
+                
+                // Determinar cor do background
+                let bgColor = 'from-green-50 to-green-100';
+                if (micro.percentualReprovacao > 50) bgColor = 'from-orange-50 to-orange-100';
+                else if (micro.percentualReprovacao > 25) bgColor = 'from-amber-50 to-amber-100';
 
                 return (
                   <motion.div
                     key={micro.nome}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className={`bg-white rounded-lg shadow-sm ${colorConfig.border} p-6`}
+                    className={`bg-gradient-to-br ${bgColor} rounded-xl p-6 shadow-sm border border-gray-200`}
                   >
-                    <div className="flex items-start justify-between mb-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-6">
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900">{micro.nome}</h3>
-                        <div className="flex items-center gap-2 mt-2">
-                          <ArrowUp size={16} className={colorConfig.trend} />
-                          <span className={`text-sm font-semibold ${colorConfig.trend}`}>
-                            {trend > 0 ? '+' : ''}{trendPercent}%
+                        <h3 className="text-base font-bold text-gray-900">{micro.nome}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-sm font-semibold ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                            {trend > 0 ? '↑' : '↓'} {Math.abs(parseFloat(trendPercent))}%
                           </span>
                           <span className="text-xs text-gray-600">hoje</span>
                         </div>
                       </div>
-                      <div className={`${colorConfig.bg} px-3 py-1 rounded-lg`}>
-                        <p className="text-2xl font-bold text-gray-900">{stats.latest.toFixed(1)}</p>
+                      <div className="flex items-center gap-2">
+                        <button className="p-2 hover:bg-white/50 rounded-lg transition-colors">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                          </svg>
+                        </button>
+                        <button className="p-2 hover:bg-white/50 rounded-lg transition-colors">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
 
-                    {/* Gráfico */}
-                    <div className="h-40 mb-4 bg-gradient-to-br from-blue-50 to-transparent rounded p-3 flex items-center justify-center">
+                    {/* Valor principal */}
+                    <div className="mb-4">
+                      <p className="text-5xl font-bold text-gray-900">{stats.latest.toFixed(1)}</p>
+                    </div>
+
+                    {/* Gráfico minimalista */}
+                    <div className="relative h-32 mb-4 bg-white/40 rounded-lg p-3">
                       {micro.historico && micro.historico.length > 0 ? (
-                        <svg className="w-full h-full" viewBox="0 0 300 160" preserveAspectRatio="none">
-                          <defs>
-                            <linearGradient id={`grad-micro-${micro.nome}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" style={{stopColor: '#f59e0b', stopOpacity: 0.3}} />
-                              <stop offset="100%" style={{stopColor: '#f59e0b', stopOpacity: 0.05}} />
-                            </linearGradient>
-                          </defs>
+                        <svg className="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
+                          {/* Grid lines sutis */}
+                          <line x1="0" y1="30" x2="300" y2="30" stroke="#e5e7eb" strokeWidth="0.5" />
+                          <line x1="0" y1="60" x2="300" y2="60" stroke="#e5e7eb" strokeWidth="0.5" />
+                          <line x1="0" y1="90" x2="300" y2="90" stroke="#e5e7eb" strokeWidth="0.5" />
+                          
                           {/* Linha do gráfico */}
                           <polyline
                             points={micro.historico
                               .map((p, i) => {
                                 const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
                                 const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
-                                const y = 160 - (p.value / maxVal) * 160;
+                                const y = 120 - (p.value / maxVal) * 100;
                                 return `${x},${y}`;
                               })
                               .join(' ')}
                             fill="none"
-                            stroke="#f59e0b"
+                            stroke="#f97316"
                             strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           />
+                          
                           {/* Pontos */}
                           {micro.historico.map((p, i) => {
                             const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
                             const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
-                            const y = 160 - (p.value / maxVal) * 160;
+                            const y = 120 - (p.value / maxVal) * 100;
                             return (
-                              <circle key={i} cx={x} cy={y} r="3" fill="#f59e0b" />
+                              <circle key={i} cx={x} cy={y} r="4" fill="#f97316" />
                             );
                           })}
                         </svg>
@@ -851,18 +807,20 @@ export function DashboardPage() {
                     </div>
 
                     {/* Stats rodapé */}
-                    <div className="flex items-center justify-between text-xs border-t border-gray-200 pt-3">
-                      <div>
-                        <p className="text-gray-600 font-medium">Máx</p>
-                        <p className="font-bold text-gray-900">{stats.max.toFixed(1)}</p>
+                    <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-300/50">
+                      <div className="text-center">
+                        <p className={`font-bold ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {trend > 0 ? '+' : ''}{trend.toFixed(1)} hoje
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-gray-600 font-medium">Mín</p>
-                        <p className="font-bold text-gray-900">{stats.min.toFixed(1)}</p>
+                      <div className="text-center">
+                        <p className="font-bold text-gray-900">{stats.max.toFixed(1)} <span className="text-xs text-gray-600">máx</span></p>
                       </div>
-                      <div>
-                        <p className="text-gray-600 font-medium">Média</p>
-                        <p className="font-bold text-gray-900">{stats.avg.toFixed(1)}</p>
+                      <div className="text-center">
+                        <p className="font-bold text-gray-900">{stats.min.toFixed(1)} <span className="text-xs text-gray-600">mín</span></p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-gray-900">{stats.avg.toFixed(1)} <span className="text-xs text-gray-600">média</span></p>
                       </div>
                     </div>
                   </motion.div>
