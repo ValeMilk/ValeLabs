@@ -710,9 +710,10 @@ export function DashboardPage() {
           ) : (
             <div className="grid grid-cols-4 gap-6">
               {produtos.map((prod) => {
-                const aprovados = prod.historico.filter(h => h.value < 50).length;
-                const reprovados = prod.historico.filter(h => h.value >= 50).length;
-                const total = prod.historico.length;
+                // Contar análises individuais, não datas agregadas
+                const aprovados = (prod.analises || []).filter((a: any) => a.statusConformidade === 'APROVADO').length;
+                const reprovados = (prod.analises || []).filter((a: any) => a.statusConformidade === 'REPROVADO').length;
+                const total = prod.analises?.length || 0;
                 const percentualReprovacao = prod.percentualReprovacao;
                 
                 let criticidade: 'alta' | 'media' | 'ok' = 'ok';
