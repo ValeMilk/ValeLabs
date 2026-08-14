@@ -172,8 +172,10 @@ export function DashboardPage() {
   // Nível 3: Microrganismos de um produto
   const carregarMicroorganismosProduto = async (categoria: string, produtoNome: string) => {
     try {
+      console.log('🔄 Iniciando carregarMicroorganismosProduto:', { categoria, produtoNome });
       setCarregandoDetalhe(true);
       setProdutoSelecionado(produtoNome);
+      console.log('✅ setProdutoSelecionado chamado com:', produtoNome);
       
       const response = await api.get('/analises', {
         params: { categoria }
@@ -248,10 +250,12 @@ export function DashboardPage() {
       });
       
       setMicrorganismos(Object.values(agrupadoMicro));
+      console.log('✅ Microrganismos carregados:', Object.values(agrupadoMicro).length);
     } catch (err: any) {
-      console.error('❌ Erro ao carregar microrganismos:', err);
+      console.error('❌ Erro ao carregar microrganismos:', err?.message, err);
       setErro(err.response?.data?.mensagem || 'Erro ao carregar microrganismos');
     } finally {
+      console.log('🏁 Finalizando carregarMicroorganismosProduto, setCarregandoDetalhe = false');
       setCarregandoDetalhe(false);
     }
   };
