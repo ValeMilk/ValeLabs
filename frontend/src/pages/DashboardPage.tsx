@@ -78,6 +78,8 @@ export function DashboardPage() {
       });
       
       const analises = response.data.dados || [];
+      console.log('📊 Análises recebidas para produtos:', { categoria, total: analises.length, amostra: analises.slice(0, 3) });
+      
       const agrupadoProduto: Record<string, ProdutoData> = {};
       
       // Agrupa por produto
@@ -118,6 +120,21 @@ export function DashboardPage() {
       });
       
       Object.keys(agrupadoProduto).forEach((produtoNome) => {
+        // Armazenar análises individuais deste produto
+        const analysesDosProduto = analises.filter((a: any) => (a.produtoNome || 'Sem produto') === produtoNome);
+        
+        const aprovados = analysesDosProduto.filter((a: any) => a.statusConformidade === 'APROVADO').length;
+        const reprovados = analysesDosProduto.filter((a: any) => a.statusConformidade === 'REPROVADO').length;
+        const pendentes = analysesDosProduto.filter((a: any) => a.statusConformidade === 'PENDENTE').length;
+        
+        console.log(`📦 Produto ${produtoNome}:`, { 
+          total: analysesDosProduto.length, 
+          aprovados, 
+          reprovados, 
+          pendentes,
+          statuses: analysesDosProduto.map((a: any) => a.statusConformidade)
+        });
+        
         const historicoDatas = historicoProduto[produtoNome] || {};
         const historico: SeriesPoint[] = Object.entries(historicoDatas).map(
           ([data, { reprovados, total }]) => ({
@@ -129,15 +146,13 @@ export function DashboardPage() {
         const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
         const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
         
-        // Armazenar análises individuais deste produto
-        const analysesDosProduto = analises.filter((a: any) => (a.produtoNome || 'Sem produto') === produtoNome);
-        
         agrupadoProduto[produtoNome].historico = historico.sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
         );
         agrupadoProduto[produtoNome].analises = analysesDosProduto;
-        agrupadoProduto[produtoNome].percentualReprovacao = totalAnalises > 0 
-          ? (totalReprovados / totalAnalises) * 100 
+        // Calcular percentual usando análises individuais, não datas agregadas
+        agrupadoProduto[produtoNome].percentualReprovacao = analysesDosProduto.length > 0
+          ? (reprovados / analysesDosProduto.length) * 100
           : 0;
         agrupadoProduto[produtoNome].microrganismos = Array.from(microsPorProduto[produtoNome] || new Set()).map(m => ({
           nome: m,
