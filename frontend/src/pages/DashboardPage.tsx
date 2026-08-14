@@ -303,46 +303,62 @@ export function DashboardPage() {
             <p className="text-gray-600">Sem produtos nesta categoria</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {produtos.map((produto) => (
-              <div
-                key={produto.nome}
-                onClick={() => carregarMicroorganismosProduto(categoriaSelecionada, produto.nome)}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-blue-600 p-5"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{produto.nome}</h3>
-                    <p className="text-sm text-gray-600">
-                      {produto.microrganismos.length} microrganismo(s) | Taxa de reprovação: {produto.percentualReprovacao.toFixed(1)}%
+          <div className="grid grid-cols-4 gap-6">
+            {produtos.map((produto) => {
+              const aprovados = produto.historico.filter(h => h.value < 50).length;
+              const reprovados = produto.historico.filter(h => h.value >= 50).length;
+              const total = produto.historico.length;
+
+              // Determinar cor da borda por criticidade
+              let borderColor = 'border-l-green-500';
+              if (produto.percentualReprovacao > 50) borderColor = 'border-l-red-500';
+              else if (produto.percentualReprovacao > 25) borderColor = 'border-l-amber-500';
+
+              return (
+                <motion.div
+                  key={produto.nome}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ y: -6, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                  onClick={() => carregarMicroorganismosProduto(categoriaSelecionada, produto.nome)}
+                  className={`bg-white rounded-lg shadow-sm border-l-4 ${borderColor} p-5 cursor-pointer transition-all`}
+                >
+                  <h3 className="text-sm font-bold text-gray-900 mb-3">{produto.nome}</h3>
+
+                  {/* Mini bar chart */}
+                  <div className="flex items-end gap-3 h-24 mb-4">
+                    <div className="flex-1 flex flex-col items-center">
+                      <div 
+                        className="w-full bg-green-500 rounded-t-sm transition-all"
+                        style={{ height: `${total > 0 ? (aprovados / total) * 100 : 0}%`, minHeight: '4px' }}
+                      ></div>
+                      <p className="text-xs font-bold text-green-600 mt-2">{aprovados}</p>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center">
+                      <div 
+                        className="w-full bg-red-500 rounded-t-sm transition-all"
+                        style={{ height: `${total > 0 ? (reprovados / total) * 100 : 0}%`, minHeight: '4px' }}
+                      ></div>
+                      <p className="text-xs font-bold text-red-600 mt-2">{reprovados}</p>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="text-xs text-gray-600 text-center">
+                    <p className="font-semibold text-gray-900">Taxa reprovação</p>
+                    <p className={`font-bold text-sm ${
+                      produto.percentualReprovacao > 50 
+                        ? 'text-red-600' 
+                        : produto.percentualReprovacao > 25 
+                        ? 'text-amber-600' 
+                        : 'text-green-600'
+                    }`}>
+                      {produto.percentualReprovacao.toFixed(1)}%
                     </p>
                   </div>
-                  <div className={`px-3 py-1 rounded-full font-bold text-sm ${
-                    produto.percentualReprovacao > 50 
-                      ? 'bg-red-100 text-red-700' 
-                      : produto.percentualReprovacao > 25 
-                      ? 'bg-yellow-100 text-yellow-700' 
-                      : 'bg-green-100 text-green-700'
-                  }`}>
-                    {produto.percentualReprovacao.toFixed(1)}%
-                  </div>
-                </div>
-
-                {/* Lista de microrganismos */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {produto.microrganismos.map((micro) => (
-                    <div 
-                      key={micro.nome} 
-                      onClick={() => carregarMicroorganismosProduto(categoriaSelecionada!, produto.nome)}
-                      className="bg-gray-50 hover:bg-blue-50 rounded p-2 text-sm cursor-pointer transition-colors"
-                    >
-                      <p className="font-medium text-gray-800">{micro.nome}</p>
-                      <p className="text-xs text-gray-600">Clique para detalhes</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>
