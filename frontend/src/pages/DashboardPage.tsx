@@ -28,6 +28,7 @@ interface ProdutoData {
   percentualReprovacao: number;
   historico: SeriesPoint[];
   microrganismos: MicroorganismoData[];
+  analises?: any[]; // Armazena análises individuais
 }
 
 interface MicroorganismoData {
@@ -128,9 +129,13 @@ export function DashboardPage() {
         const totalReprovados = Object.values(historicoDatas).reduce((s, d) => s + d.reprovados, 0);
         const totalAnalises = Object.values(historicoDatas).reduce((s, d) => s + d.total, 0);
         
+        // Armazenar análises individuais deste produto
+        const analysesDosProduto = analises.filter((a: any) => (a.produtoNome || 'Sem produto') === produtoNome);
+        
         agrupadoProduto[produtoNome].historico = historico.sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
         );
+        agrupadoProduto[produtoNome].analises = analysesDosProduto;
         agrupadoProduto[produtoNome].percentualReprovacao = totalAnalises > 0 
           ? (totalReprovados / totalAnalises) * 100 
           : 0;
@@ -305,9 +310,10 @@ export function DashboardPage() {
         ) : (
           <div className="grid grid-cols-4 gap-6">
             {produtos.map((produto) => {
-              const aprovados = produto.historico.filter(h => h.value < 50).length;
-              const reprovados = produto.historico.filter(h => h.value >= 50).length;
-              const total = produto.historico.length;
+              // Contar análises individuais por status, não por dia
+              const aprovados = (produto.analises || []).filter((a: any) => a.statusConformidade === 'APROVADO').length;
+              const reprovados = (produto.analises || []).filter((a: any) => a.statusConformidade === 'REPROVADO').length;
+              const total = produto.analises?.length || 0;
 
               // Determinar cor da borda por criticidade
               let borderColor = 'border-l-green-500';
@@ -320,7 +326,10 @@ export function DashboardPage() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   whileHover={{ y: -6, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                  onClick={() => carregarMicroorganismosProduto(categoriaSelecionada, produto.nome)}
+                  onClick={() => {
+                    console.log('🔍 Clicando em produto:', produto.nome, { categoriaSelecionada });
+                    carregarMicroorganismosProduto(categoriaSelecionada, produto.nome);
+                  }}
                   className={`bg-white rounded-lg shadow-sm border-l-4 ${borderColor} p-5 cursor-pointer transition-all`}
                 >
                   <h3 className="text-sm font-bold text-gray-900 mb-3">{produto.nome}</h3>
