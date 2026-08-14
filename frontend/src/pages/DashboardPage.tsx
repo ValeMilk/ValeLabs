@@ -64,6 +64,14 @@ export function DashboardPage() {
   const [sortColumn, setSortColumn] = useState<keyof TabelaRow>('produto');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
+  // Indicadores da tela principal
+  const [indicadores, setIndicadores] = useState({
+    total: 0,
+    aprovados: 0,
+    atencao: 0,
+    reprovados: 0
+  });
+  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -119,7 +127,19 @@ export function DashboardPage() {
         };
       });
       
+      // Calcular indicadores
+      const totalAnalises = analises.length;
+      const aprovadosCount = analises.filter((a: any) => a.statusConformidade === 'APROVADO').length;
+      const reprovadosCount = analises.filter((a: any) => a.statusConformidade === 'REPROVADO').length;
+      const atencaoCount = tabelaDadosCalculado.filter(row => row.prioridade === 'MÉDIA').length;
+      
       setTabelaDados(tabelaDadosCalculado);
+      setIndicadores({
+        total: totalAnalises,
+        aprovados: aprovadosCount,
+        atencao: atencaoCount,
+        reprovados: reprovadosCount
+      });
     } catch (err: any) {
       console.error('Erro ao carregar dados da tabela:', err);
     }
@@ -523,25 +543,25 @@ export function DashboardPage() {
           <div className="grid grid-cols-4 gap-6 mb-12">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Total</p>
-              <p className="text-3xl font-bold text-blue-600">{totalAnalises}</p>
+              <p className="text-3xl font-bold text-blue-600">{indicadores.total}</p>
               <p className="text-xs text-gray-600 mt-2">análises</p>
             </div>
-            <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
-              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Crítico</p>
-              <p className="text-3xl font-bold text-red-600">
-                {categorias.filter(c => c.criticidade === Criticidade.CRÍTICO).length}
+            <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-6">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Aprovados</p>
+              <p className="text-3xl font-bold text-green-600">
+                {indicadores.aprovados}
               </p>
             </div>
             <div className="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6">
               <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Atenção</p>
               <p className="text-3xl font-bold text-amber-600">
-                {categorias.filter(c => c.criticidade === Criticidade.ATENÇÃO).length}
+                {indicadores.atencao}
               </p>
             </div>
-            <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-6">
-              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Conforme</p>
-              <p className="text-3xl font-bold text-green-600">
-                {categorias.filter(c => c.criticidade === Criticidade.CONFORME).length}
+            <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
+              <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Reprovados</p>
+              <p className="text-3xl font-bold text-red-600">
+                {indicadores.reprovados}
               </p>
             </div>
           </div>
