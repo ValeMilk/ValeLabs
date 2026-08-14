@@ -14,7 +14,7 @@ import {
   ArrowLeft,
   Home,
 } from 'lucide-react';
-import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
 
 interface ProdutoData {
@@ -721,106 +721,99 @@ export function DashboardPage() {
                   : { max: 0, min: 0, avg: 0, latest: 0, previous: 0 };
 
                 const trend = stats.latest - stats.previous;
-                const trendPercent = stats.previous !== 0 ? ((trend / stats.previous) * 100).toFixed(1) : '0.0';
                 
+                // Dados para o gráfico
+                const chartData = micro.historico.map(p => ({
+                  value: p.value,
+                  date: new Date(p.date).toLocaleDateString('pt-BR')
+                }));
+
                 // Determinar cor do background
-                let bgColor = 'from-green-50 to-green-100';
-                if (micro.percentualReprovacao > 50) bgColor = 'from-orange-50 to-orange-100';
-                else if (micro.percentualReprovacao > 25) bgColor = 'from-amber-50 to-amber-100';
+                let bgColor = 'from-emerald-50 to-emerald-100';
+                let strokeColor = '#10b981';
+                if (micro.percentualReprovacao > 50) {
+                  bgColor = 'from-orange-50 to-orange-100';
+                  strokeColor = '#f97316';
+                } else if (micro.percentualReprovacao > 25) {
+                  bgColor = 'from-amber-50 to-amber-100';
+                  strokeColor = '#f59e0b';
+                }
 
                 return (
                   <motion.div
                     key={micro.nome}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className={`bg-gradient-to-br ${bgColor} rounded-xl p-6 shadow-sm border border-gray-200`}
+                    className={`bg-gradient-to-br ${bgColor} rounded-2xl p-8 shadow-sm border border-gray-200 overflow-hidden`}
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-6">
                       <div>
-                        <h3 className="text-base font-bold text-gray-900">{micro.nome}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-sm font-semibold ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                            {trend > 0 ? '↑' : '↓'} {Math.abs(parseFloat(trendPercent))}%
-                          </span>
-                          <span className="text-xs text-gray-600">hoje</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-2 hover:bg-white/50 rounded-lg transition-colors">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                          </svg>
-                        </button>
-                        <button className="p-2 hover:bg-white/50 rounded-lg transition-colors">
-                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                          </svg>
-                        </button>
+                        <h3 className="text-lg font-bold text-gray-900">{micro.nome}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{micro.historico.length} análise(s)</p>
                       </div>
                     </div>
 
-                    {/* Valor principal */}
-                    <div className="mb-4">
-                      <p className="text-5xl font-bold text-gray-900">{stats.latest.toFixed(1)}</p>
-                    </div>
+                    {/* Valor principal + Gráfico */}
+                    <div className="flex items-end gap-6 mb-6">
+                      {/* Valor */}
+                      <div className="flex-shrink-0">
+                        <p className="text-6xl font-bold text-gray-900 leading-none">{stats.latest.toFixed(1)}</p>
+                        <p className={`text-sm font-semibold mt-2 ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {trend > 0 ? '↑' : '↓'} {Math.abs(trend).toFixed(1)} hoje
+                        </p>
+                      </div>
 
-                    {/* Gráfico minimalista */}
-                    <div className="relative h-32 mb-4 bg-white/40 rounded-lg p-3">
-                      {micro.historico && micro.historico.length > 0 ? (
-                        <svg className="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
-                          {/* Grid lines sutis */}
-                          <line x1="0" y1="30" x2="300" y2="30" stroke="#e5e7eb" strokeWidth="0.5" />
-                          <line x1="0" y1="60" x2="300" y2="60" stroke="#e5e7eb" strokeWidth="0.5" />
-                          <line x1="0" y1="90" x2="300" y2="90" stroke="#e5e7eb" strokeWidth="0.5" />
-                          
-                          {/* Linha do gráfico */}
-                          <polyline
-                            points={micro.historico
-                              .map((p, i) => {
-                                const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
-                                const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
-                                const y = 120 - (p.value / maxVal) * 100;
-                                return `${x},${y}`;
-                              })
-                              .join(' ')}
-                            fill="none"
-                            stroke="#f97316"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                          
-                          {/* Pontos */}
-                          {micro.historico.map((p, i) => {
-                            const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
-                            const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
-                            const y = 120 - (p.value / maxVal) * 100;
-                            return (
-                              <circle key={i} cx={x} cy={y} r="4" fill="#f97316" />
-                            );
-                          })}
-                        </svg>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Sem dados</div>
-                      )}
+                      {/* Gráfico */}
+                      <div className="flex-1 h-24">
+                        {chartData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="0" stroke="#e5e7eb" vertical={false} />
+                              <XAxis dataKey="date" tick={false} />
+                              <YAxis tick={false} />
+                              <Tooltip 
+                                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                                formatter={(value) => value.toFixed(1)}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke={strokeColor}
+                                strokeWidth={2.5}
+                                dot={{ fill: strokeColor, r: 3 }}
+                                activeDot={{ r: 5 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-gray-400">Sem dados</div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Stats rodapé */}
-                    <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-300/50">
-                      <div className="text-center">
-                        <p className={`font-bold ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                          {trend > 0 ? '+' : ''}{trend.toFixed(1)} hoje
+                    <div className="flex items-center justify-between text-sm pt-4 border-t border-gray-300/50 gap-4">
+                      <div className="flex-1 text-center">
+                        <p className="text-xs text-gray-600 font-medium">Hoje</p>
+                        <p className={`font-bold text-base ${trend >= 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                          {trend > 0 ? '+' : ''}{trend.toFixed(1)}
                         </p>
                       </div>
-                      <div className="text-center">
-                        <p className="font-bold text-gray-900">{stats.max.toFixed(1)} <span className="text-xs text-gray-600">máx</span></p>
+                      <div className="w-px h-8 bg-gray-300/50"></div>
+                      <div className="flex-1 text-center">
+                        <p className="text-xs text-gray-600 font-medium">Máx</p>
+                        <p className="font-bold text-base text-gray-900">{stats.max.toFixed(1)}</p>
                       </div>
-                      <div className="text-center">
-                        <p className="font-bold text-gray-900">{stats.min.toFixed(1)} <span className="text-xs text-gray-600">mín</span></p>
+                      <div className="w-px h-8 bg-gray-300/50"></div>
+                      <div className="flex-1 text-center">
+                        <p className="text-xs text-gray-600 font-medium">Mín</p>
+                        <p className="font-bold text-base text-gray-900">{stats.min.toFixed(1)}</p>
                       </div>
-                      <div className="text-center">
-                        <p className="font-bold text-gray-900">{stats.avg.toFixed(1)} <span className="text-xs text-gray-600">média</span></p>
+                      <div className="w-px h-8 bg-gray-300/50"></div>
+                      <div className="flex-1 text-center">
+                        <p className="text-xs text-gray-600 font-medium">Média</p>
+                        <p className="font-bold text-base text-gray-900">{stats.avg.toFixed(1)}</p>
                       </div>
                     </div>
                   </motion.div>
