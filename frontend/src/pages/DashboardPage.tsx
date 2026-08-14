@@ -13,6 +13,7 @@ import {
   Beaker,
   ArrowLeft,
   Home,
+  ArrowUp,
 } from 'lucide-react';
 import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
 import { motion } from 'framer-motion';
@@ -636,31 +637,113 @@ export function DashboardPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Produtos</h2>
-              <div className="grid grid-cols-3 gap-6">
-                {produtos.map((prod) => (
-                  <motion.div
-                    key={prod.nome}
-                    whileHover={{ y: -6 }}
-                    onClick={() => {
-                      setProdutoSelecionado(prod.nome);
-                      carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
-                    }}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all"
-                  >
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">{prod.nome}</h3>
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-600 font-medium mb-1">Taxa de Aprovação</p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {Math.round(100 - prod.percentualReprovacao)}%
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-gray-200 text-xs text-gray-600">
-                      {prod.historico.length} análise(s)
-                    </div>
-                  </motion.div>
-                ))}
+            <div className="space-y-4">
+              {/* Status badges */}
+              <div className="flex gap-4 mb-6">
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle size={20} className="text-green-600" />
+                  <span className="font-bold text-green-600">{produtos.filter(p => p.percentualReprovacao < 25).length}</span>
+                  <span className="text-sm text-green-700">Aprovado(s)</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle size={20} className="text-red-600" />
+                  <span className="font-bold text-red-600">{produtos.filter(p => p.percentualReprovacao >= 50).length}</span>
+                  <span className="text-sm text-red-700">Crítico(s)</span>
+                </div>
+              </div>
+
+              {/* Cards de produtos */}
+              <div className="space-y-4">
+                {produtos.map((prod) => {
+                  const percentualReprovacao = prod.percentualReprovacao;
+                  let criticidade: 'alta' | 'media' | 'ok' = 'ok';
+                  if (percentualReprovacao > 50) criticidade = 'alta';
+                  else if (percentualReprovacao > 25) criticidade = 'media';
+                  
+                  const colorConfigs: Record<'alta' | 'media' | 'ok', any> = {
+                    alta: { border: 'border-l-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-700' },
+                    media: { border: 'border-l-amber-500', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
+                    ok: { border: 'border-l-green-500', bg: 'bg-green-50', badge: 'bg-green-100 text-green-700' }
+                  };
+                  const colorConfig = colorConfigs[criticidade];
+
+                  return (
+                    <motion.div
+                      key={prod.nome}
+                      whileHover={{ y: -2 }}
+                      onClick={() => {
+                        setProdutoSelecionado(prod.nome);
+                        carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
+                      }}
+                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 cursor-pointer hover:shadow-md transition-all ${colorConfig.border}`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900">{prod.nome}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {prod.microrganismos.length} microrganismo(s) | Taxa de reprovação: {percentualReprovacao.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${colorConfig.badge}`}>
+                          {percentualReprovacao.toFixed(1)}%
+                        </div>
+                      </div>
+
+                      {/* Gráfico miniatura */}
+                      <div className="h-32 mb-4 bg-gradient-to-br from-blue-50 to-transparent rounded p-3">
+                        {prod.historico && prod.historico.length > 0 ? (
+                          <svg className="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id={`grad-${prod.nome}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style={{stopColor: '#005EB8', stopOpacity: 0.3}} />
+                                <stop offset="100%" style={{stopColor: '#005EB8', stopOpacity: 0.05}} />
+                              </linearGradient>
+                            </defs>
+                            {/* Linha do gráfico */}
+                            <polyline
+                              points={prod.historico
+                                .map((p, i) => {
+                                  const x = (i / Math.max(1, prod.historico.length - 1)) * 300;
+                                  const y = 120 - (p.value / 100) * 120;
+                                  return `${x},${y}`;
+                                })
+                                .join(' ')}
+                              fill="none"
+                              stroke="#005EB8"
+                              strokeWidth="2"
+                            />
+                            {/* Pontos */}
+                            {prod.historico.map((p, i) => {
+                              const x = (i / Math.max(1, prod.historico.length - 1)) * 300;
+                              const y = 120 - (p.value / 100) * 120;
+                              return (
+                                <circle key={i} cx={x} cy={y} r="2" fill="#005EB8" />
+                              );
+                            })}
+                          </svg>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-gray-400 text-sm">Sem dados</div>
+                        )}
+                      </div>
+
+                      {/* Stats rodapé */}
+                      <div className="flex gap-4 text-xs">
+                        <div>
+                          <p className="text-gray-600 font-medium">Aprovadas</p>
+                          <p className="text-lg font-bold text-green-600">{prod.historico.filter(h => h.value < 50).length}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-600 font-medium">Reprovadas</p>
+                          <p className="text-lg font-bold text-red-600">{prod.historico.filter(h => h.value >= 50).length}</p>
+                        </div>
+                        <div className="ml-auto">
+                          <p className="text-gray-600 font-medium">Últimas 30 dias</p>
+                          <p className="text-sm text-gray-700">{prod.historico.length} análise(s)</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -679,36 +762,112 @@ export function DashboardPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Microrganismos</h2>
-              <div className="grid grid-cols-2 gap-6">
-                {microrganismos.map((micro) => (
+            <div className="grid grid-cols-2 gap-6">
+              {microrganismos.map((micro) => {
+                let criticidade: 'alta' | 'media' | 'ok' = 'ok';
+                if (micro.percentualReprovacao > 50) criticidade = 'alta';
+                else if (micro.percentualReprovacao > 25) criticidade = 'media';
+                
+                const colorConfigs: Record<'alta' | 'media' | 'ok', any> = {
+                  alta: { border: 'border-l-4 border-l-red-500', bg: 'bg-red-50', text: 'text-red-700', trend: 'text-red-600' },
+                  media: { border: 'border-l-4 border-l-amber-500', bg: 'bg-amber-50', text: 'text-amber-700', trend: 'text-amber-600' },
+                  ok: { border: 'border-l-4 border-l-green-500', bg: 'bg-green-50', text: 'text-green-700', trend: 'text-green-600' }
+                };
+                const colorConfig = colorConfigs[criticidade];
+
+                const stats = micro.historico.length > 0
+                  ? {
+                      max: Math.max(...micro.historico.map(h => h.value)),
+                      min: Math.min(...micro.historico.map(h => h.value)),
+                      avg: micro.historico.reduce((sum, h) => sum + h.value, 0) / micro.historico.length,
+                      latest: micro.historico[micro.historico.length - 1]?.value || 0,
+                      previous: micro.historico.length > 1 ? micro.historico[micro.historico.length - 2]?.value || 0 : 0
+                    }
+                  : { max: 0, min: 0, avg: 0, latest: 0, previous: 0 };
+
+                const trend = stats.latest - stats.previous;
+                const trendPercent = stats.previous !== 0 ? ((trend / stats.previous) * 100).toFixed(1) : '0.0';
+
+                return (
                   <motion.div
                     key={micro.nome}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+                    className={`bg-white rounded-lg shadow-sm ${colorConfig.border} p-6`}
                   >
-                    <ProgressMetricCard
-                      title={micro.nome}
-                      total={micro.mediaResultado?.toFixed(1)}
-                      data={micro.historico}
-                      size="md"
-                      accent={
-                        micro.percentualReprovacao > 50
-                          ? 'rose'
-                          : micro.percentualReprovacao > 25
-                          ? 'amber'
-                          : 'emerald'
-                      }
-                      loading={carregandoDetalhe}
-                      valueFormatter={(v) => `${v.toFixed(1)}`}
-                      dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-                      unit=""
-                    />
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{micro.nome}</h3>
+                        <div className="flex items-center gap-2 mt-2">
+                          <ArrowUp size={16} className={colorConfig.trend} />
+                          <span className={`text-sm font-semibold ${colorConfig.trend}`}>
+                            {trend > 0 ? '+' : ''}{trendPercent}%
+                          </span>
+                          <span className="text-xs text-gray-600">hoje</span>
+                        </div>
+                      </div>
+                      <div className={`${colorConfig.bg} px-3 py-1 rounded-lg`}>
+                        <p className="text-2xl font-bold text-gray-900">{stats.latest.toFixed(1)}</p>
+                      </div>
+                    </div>
+
+                    {/* Gráfico */}
+                    <div className="h-40 mb-4 bg-gradient-to-br from-blue-50 to-transparent rounded p-3 flex items-center justify-center">
+                      {micro.historico && micro.historico.length > 0 ? (
+                        <svg className="w-full h-full" viewBox="0 0 300 160" preserveAspectRatio="none">
+                          <defs>
+                            <linearGradient id={`grad-micro-${micro.nome}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" style={{stopColor: '#f59e0b', stopOpacity: 0.3}} />
+                              <stop offset="100%" style={{stopColor: '#f59e0b', stopOpacity: 0.05}} />
+                            </linearGradient>
+                          </defs>
+                          {/* Linha do gráfico */}
+                          <polyline
+                            points={micro.historico
+                              .map((p, i) => {
+                                const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
+                                const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
+                                const y = 160 - (p.value / maxVal) * 160;
+                                return `${x},${y}`;
+                              })
+                              .join(' ')}
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth="2.5"
+                          />
+                          {/* Pontos */}
+                          {micro.historico.map((p, i) => {
+                            const x = (i / Math.max(1, micro.historico.length - 1)) * 300;
+                            const maxVal = Math.max(...micro.historico.map(h => h.value), 100);
+                            const y = 160 - (p.value / maxVal) * 160;
+                            return (
+                              <circle key={i} cx={x} cy={y} r="3" fill="#f59e0b" />
+                            );
+                          })}
+                        </svg>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">Sem dados</div>
+                      )}
+                    </div>
+
+                    {/* Stats rodapé */}
+                    <div className="flex items-center justify-between text-xs border-t border-gray-200 pt-3">
+                      <div>
+                        <p className="text-gray-600 font-medium">Máx</p>
+                        <p className="font-bold text-gray-900">{stats.max.toFixed(1)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">Mín</p>
+                        <p className="font-bold text-gray-900">{stats.min.toFixed(1)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 font-medium">Média</p>
+                        <p className="font-bold text-gray-900">{stats.avg.toFixed(1)}</p>
+                      </div>
+                    </div>
                   </motion.div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </motion.div>
