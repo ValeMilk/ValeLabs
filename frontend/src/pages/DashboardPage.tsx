@@ -17,6 +17,11 @@ import {
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
 
+interface SeriesPoint {
+  value: number;
+  date: string;
+}
+
 interface ProdutoData {
   nome: string;
   produtoId?: string;
@@ -260,69 +265,6 @@ export function DashboardPage() {
     }
   };
 
-  // Nível 3: Microrganismos de um produto
-  if (categoriaSelecionada && produtoSelecionado) {
-    const produto = produtos.find(p => p.nome === produtoSelecionado);
-    
-    return (
-      <div className="max-w-7xl mx-auto">
-        {/* Breadcrumb + Voltar */}
-        <div className="mb-6 flex items-center gap-2">
-          <button
-            onClick={() => setProdutoSelecionado(null)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Voltar
-          </button>
-          <span className="text-gray-500">/</span>
-          <button
-            onClick={() => setCategoriaSelecionada(null)}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            {categoriaSelecionada}
-          </button>
-          <span className="text-gray-500">/</span>
-          <h1 className="text-2xl font-bold text-gray-800">{produtoSelecionado}</h1>
-        </div>
-
-        {/* Cards de microrganismos com gráficos */}
-        {carregandoDetalhe ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : microrganismos.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600">Sem microrganismos para este produto</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {microrganismos.map((micro) => (
-              <ProgressMetricCard
-                key={micro.nome}
-                title={micro.nome}
-                total={micro.mediaResultado?.toFixed(1)}
-                data={micro.historico}
-                size="md"
-                accent={
-                  micro.percentualReprovacao > 50 
-                    ? 'rose' 
-                    : micro.percentualReprovacao > 25 
-                    ? 'amber' 
-                    : 'emerald'
-                }
-                loading={carregandoDetalhe}
-                valueFormatter={(v) => `${v.toFixed(1)}`}
-                dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-                unit=""
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   // Nível 2: Produtos de uma categoria
   if (categoriaSelecionada) {
     const categoria = categorias.find(c => c.categoria === categoriaSelecionada);
@@ -385,28 +327,6 @@ export function DashboardPage() {
                     {produto.percentualReprovacao.toFixed(1)}%
                   </div>
                 </div>
-
-                {/* Mini gráfico inline */}
-                {produto.historico.length >= 2 && (
-                  <div className="mb-4 h-12">
-                    <ProgressMetricCard
-                      title=""
-                      data={produto.historico}
-                      size="sm"
-                      accent={
-                        produto.percentualReprovacao > 50 
-                          ? 'rose' 
-                          : produto.percentualReprovacao > 25 
-                          ? 'amber' 
-                          : 'emerald'
-                      }
-                      loading={false}
-                      showStats={false}
-                      valueFormatter={(v) => `${Math.round(v)}%`}
-                      dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
-                    />
-                  </div>
-                )}
 
                 {/* Lista de microrganismos */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -774,7 +694,7 @@ export function DashboardPage() {
                               <YAxis tick={false} />
                               <Tooltip 
                                 contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                                formatter={(value) => value.toFixed(1)}
+                                formatter={(value: any) => typeof value === 'number' ? value.toFixed(1) : value}
                               />
                               <Line
                                 type="monotone"
