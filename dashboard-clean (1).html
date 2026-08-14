@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acompanhamento Microbiológico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f8fa;--card:#ffffff;--line:#e6eaef;--line2:#eef1f5;
+    --txt:#1e2733;--muted:#6b7684;--soft:#9aa5b1;
+    --alta:#e5484d;--media:#e8952a;--ok:#22a06b;--accent:#005EB8;
+    --alta-bg:#fdecec;--media-bg:#fdf3e6;--ok-bg:#e8f6ef;--accent-bg:#e5eff8;
+    --font:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,sans-serif;
+    --sh:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
+    --sh-h:0 8px 24px rgba(16,24,40,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--font);line-height:1.45;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* SIDEBAR */
+  .side{background:var(--card);border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .brand{font-size:16px;font-weight:700;letter-spacing:-.2px}
+  .brand span{color:var(--accent)}
+  .brand-sub{font-size:11px;color:var(--muted);margin-top:2px;margin-bottom:28px}
+  .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--soft);margin:20px 0 8px;font-weight:600}
+  .nav-item{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted);padding:9px 12px;border-radius:9px;cursor:pointer;margin-bottom:2px;transition:background .12s,color .12s}
+  .nav-item:hover{background:var(--bg);color:var(--txt)}
+  .nav-item.active{background:var(--accent-bg);color:var(--accent);font-weight:600}
+  .nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .nav-dot.alta{background:var(--alta)}.nav-dot.media{background:var(--media)}.nav-dot.ok{background:var(--ok)}
+
+  /* MAIN */
+  .main{padding:28px 36px;max-width:1560px}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+  .crumb{font-size:13px;color:var(--muted)}
+  .crumb a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500}
+  .crumb a:hover{text-decoration:underline}
+  .crumb .cur{color:var(--txt);font-weight:600}
+  .period{font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:8px 14px;border-radius:9px;box-shadow:var(--sh)}
+
+  h2.page{font-size:20px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
+  .page-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--sh)}
+  .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .kpi .swatch{width:9px;height:9px;border-radius:3px}
+  .kpi .swatch.alta{background:var(--alta)}.kpi .swatch.media{background:var(--media)}.kpi .swatch.ok{background:var(--ok)}.kpi .swatch.accent{background:var(--accent)}
+  .kpi .val{font-size:34px;font-weight:700;line-height:1;letter-spacing:-1px}
+  .kpi .val.alta{color:var(--alta)}.kpi .val.media{color:var(--media)}.kpi .val.ok{color:var(--ok)}
+  .kpi .foot{font-size:11.5px;color:var(--soft);margin-top:8px}
+
+  .section-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--soft);font-weight:600;margin:4px 0 16px}
+
+  /* NIVEL 1 */
+  .macro-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .cat-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;transition:transform .14s,box-shadow .14s,border-color .14s;position:relative;overflow:hidden}
+  .cat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--line)}
+  .cat-card.alta::before{background:var(--alta)}.cat-card.media::before{background:var(--media)}.cat-card.ok::before{background:var(--ok)}
+  .cat-card:hover{transform:translateY(-3px);box-shadow:var(--sh-h);border-color:#d7dde5}
+  .cat-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+  .cat-name{font-size:16px;font-weight:600;letter-spacing:-.2px}
+  .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px}
+  .badge.alta{background:var(--alta-bg);color:var(--alta)}.badge.media{background:var(--media-bg);color:var(--media)}.badge.ok{background:var(--ok-bg);color:var(--ok)}
+  .cat-worst{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+  .cat-worst b{color:var(--txt)}
+  .sparkwrap{height:46px;margin-bottom:12px}
+  .mini-row{display:flex;justify-content:space-between;font-size:11.5px;padding:5px 0;color:var(--muted);border-top:1px solid var(--line2)}
+  .mini-row:first-of-type{border-top:none}
+  .v.alta{color:var(--alta);font-weight:600}.v.media{color:var(--media);font-weight:600}.v.ok{color:var(--ok);font-weight:600}
+  .lim{color:var(--soft);font-weight:400}
+  .drill-hint{font-size:11px;color:var(--accent);margin-top:12px;text-align:right;font-weight:500}
+
+  /* NIVEL 2 */
+  .cat-detail{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .analise-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--sh)}
+  .analise-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .analise-name{font-size:15px;font-weight:600}
+  .analise-faixa{font-size:11.5px;color:var(--muted);margin-bottom:14px}
+  .analise-faixa b{color:var(--txt)}
+  .chart-box{position:relative;height:200px}
+  .prod-list{margin-top:14px;border-top:1px solid var(--line2);padding-top:6px}
+  .prod-item{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:8px;cursor:pointer;border-radius:8px;transition:background .12s}
+  .prod-item:hover{background:var(--bg)}
+  .prod-item .pv{font-weight:600}
+
+  /* NIVEL 3 */
+  .prod-detail{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--sh)}
+  .prod-charts{display:grid;grid-template-columns:2.4fr 1fr;gap:26px;margin-top:16px}
+  .chart-lg{position:relative;height:380px}
+  .prod-side{display:flex;flex-direction:column;gap:14px}
+  .chart-sm{position:relative;height:220px}
+  .statlet{background:var(--bg);border:1px solid var(--line2);border-radius:11px;padding:13px 15px}
+  .statlet .l{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600}
+  .statlet .n{font-size:21px;font-weight:700;margin-top:4px;letter-spacing:-.5px}
+  .subhead{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--txt)}
+
+  .hint{font-size:12px;color:var(--muted);margin-bottom:8px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">Vale<span>Milk</span></div>
+    <div class="brand-sub">Acompanhamento Microbiológico</div>
+    <div class="nav-label">Navegação</div>
+    <div class="nav-item active" data-nav="macro" onclick="goMacro()">Macro geral</div>
+    <div class="nav-label">Categorias</div>
+    <div id="navCats"></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb" id="crumb"><span class="cur">Macro geral</span></div>
+      <div class="period">Últimas 8 semanas ▾</div>
+    </div>
+
+    <div id="view-macro">
+      <h2 class="page">Visão geral</h2>
+      <div class="page-sub">Criticidade por categoria — a pior análise de cada categoria define a faixa</div>
+      <div id="kpiStrip"></div>
+      <div class="section-title">Categorias</div>
+      <div class="macro-grid" id="macroGrid"></div>
+    </div>
+
+    <div id="view-cat" class="hidden">
+      <h2 class="page" id="catTitle">Categoria</h2>
+      <div class="page-sub">Cada análise tem faixa própria nesta categoria. Clique num produto para o detalhe.</div>
+      <div class="cat-detail" id="catDetail"></div>
+    </div>
+
+    <div id="view-prod" class="hidden">
+      <h2 class="page" id="prodTitle">Produto</h2>
+      <div class="page-sub" id="prodHint"></div>
+      <div class="prod-detail">
+        <div class="prod-charts">
+          <div>
+            <div class="subhead">Tendência no tempo — linha por análise, tracejado = limite</div>
+            <div class="chart-lg"><canvas id="prodLine"></canvas></div>
+          </div>
+          <div class="prod-side">
+            <div class="subhead">Foto do mês atual</div>
+            <div class="chart-sm"><canvas id="prodBar"></canvas></div>
+            <div id="prodStats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const LABELS=['Sem 1','Sem 2','Sem 3','Sem 4','Sem 5','Sem 6','Sem 7','Sem 8'];
+const CANALISE={'Coliformes 30°C':'#005EB8','E. coli':'#e5484d','Bolores e Leveduras':'#e8952a'};
+
+const CATS={
+  'Queijos':{analises:{'Coliformes 30°C':{limite:20,serie:[60,68,71,73,70,75,73,73]},'E. coli':{limite:15,serie:[40,45,42,50,48,52,49,51]},'Bolores e Leveduras':{limite:25,serie:[20,22,25,21,24,23,26,24]}},
+    produtos:{'Muçarela':{'Coliformes 30°C':[62,70,72,75,71,77,74,76],'E. coli':[42,47,44,52,50,54,51,53],'Bolores e Leveduras':[18,20,23,19,22,21,24,22]},'Prato':{'Coliformes 30°C':[58,66,70,71,69,73,72,70],'E. coli':[38,43,40,48,46,50,47,49],'Bolores e Leveduras':[22,24,27,23,26,25,28,26]}}},
+  'Iogurtes':{analises:{'Coliformes 30°C':{limite:15,serie:[30,35,40,45,50,55,54,58]},'E. coli':{limite:10,serie:[10,12,15,14,18,20,19,22]},'Bolores e Leveduras':{limite:20,serie:[45,50,55,52,58,56,59,58]}},
+    produtos:{'Natural':{'Coliformes 30°C':[32,37,42,47,52,57,56,60],'E. coli':[11,13,16,15,19,21,20,23],'Bolores e Leveduras':[47,52,57,54,60,58,61,60]},'Grego':{'Coliformes 30°C':[28,33,38,43,48,53,52,56],'E. coli':[9,11,14,13,17,19,18,21],'Bolores e Leveduras':[43,48,53,50,56,54,57,56]}}},
+  'Manteiga':{analises:{'Coliformes 30°C':{limite:15,serie:[8,10,12,9,11,10,13,12]},'Bolores e Leveduras':{limite:20,serie:[20,22,25,24,27,26,28,28]}},
+    produtos:{'Com sal':{'Coliformes 30°C':[9,11,13,10,12,11,14,13],'Bolores e Leveduras':[21,23,26,25,28,27,29,29]},'Sem sal':{'Coliformes 30°C':[7,9,11,8,10,9,12,11],'Bolores e Leveduras':[19,21,24,23,26,25,27,27]}}},
+  'L.C.M.':{analises:{'Coliformes 30°C':{limite:15,serie:[50,55,60,58,62,64,63,64]},'E. coli':{limite:10,serie:[55,58,62,60,64,63,65,64]}},
+    produtos:{'L.C.M. Integral':{'Coliformes 30°C':[52,57,62,60,64,66,65,66],'E. coli':[57,60,64,62,66,65,67,66]},'L.C.M. Desnatado':{'Coliformes 30°C':[48,53,58,56,60,62,61,62],'E. coli':[53,56,60,58,62,61,63,62]}}},
+  'Bebida Láctea':{analises:{'Coliformes 30°C':{limite:20,serie:[15,18,20,19,22,21,23,22]},'E. coli':{limite:12,serie:[5,6,8,7,9,8,10,9]}},
+    produtos:{'Bebida morango':{'Coliformes 30°C':[16,19,21,20,23,22,24,23],'E. coli':[5,6,8,7,9,8,10,9]}}},
+  'Leite UHT':{analises:{'Coliformes 30°C':{limite:10,serie:[0,1,0,2,0,1,0,0]},'E. coli':{limite:5,serie:[0,0,0,0,1,0,0,0]}},
+    produtos:{'Leite Integral UHT':{'Coliformes 30°C':[0,1,0,2,0,1,0,0],'E. coli':[0,0,0,0,1,0,0,0]}}}
+};
+
+function last(a){return a[a.length-1];}
+function faixaAnalise(v,lim){if(v>lim)return'alta';if(v>=lim*0.6)return'media';return'ok';}
+const RANK={alta:3,media:2,ok:1};
+function criticidadeCategoria(cat){let worst='ok',wn='',wv=0;
+  for(const [n,o] of Object.entries(CATS[cat].analises)){const v=last(o.serie),f=faixaAnalise(v,o.limite);
+    if(RANK[f]>RANK[worst]||(RANK[f]===RANK[worst]&&v>wv)){worst=f;wn=n;wv=v;}}return{faixa:worst,analise:wn,valor:wv};}
+
+let charts=[];
+function clearCharts(){charts.forEach(c=>{try{c.destroy();}catch(e){}});charts=[];}
+function orderedCats(){return Object.keys(CATS).sort((x,y)=>{const cx=criticidadeCategoria(x),cy=criticidadeCategoria(y);return RANK[cy.faixa]-RANK[cx.faixa]||cy.valor-cx.valor;});}
+
+function buildNav(){
+  const nav=document.getElementById('navCats');nav.innerHTML='';
+  orderedCats().forEach(cat=>{const c=criticidadeCategoria(cat);
+    nav.innerHTML+=`<div class="nav-item" data-nav="${cat}" onclick="goCat('${cat}')"><span class="nav-dot ${c.faixa}"></span>${cat}</div>`;});
+}
+function setActiveNav(key){document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===key));}
+
+function goMacro(){
+  show('macro');setActiveNav('macro');clearCharts();
+  document.getElementById('crumb').innerHTML=`<span class="cur">Macro geral</span>`;
+  let alta=0,media=0,ok=0;
+  Object.keys(CATS).forEach(cat=>{const f=criticidadeCategoria(cat).faixa;if(f==='alta')alta++;else if(f==='media')media++;else ok++;});
+  document.getElementById('kpiStrip').innerHTML=`<div class="kpis">
+    <div class="kpi"><div class="label"><span class="swatch accent"></span>Categorias</div><div class="val">${Object.keys(CATS).length}</div><div class="foot">monitoradas no período</div></div>
+    <div class="kpi"><div class="label"><span class="swatch alta"></span>Crítico</div><div class="val alta">${alta}</div><div class="foot">ação imediata</div></div>
+    <div class="kpi"><div class="label"><span class="swatch media"></span>Atenção</div><div class="val media">${media}</div><div class="foot">monitorar de perto</div></div>
+    <div class="kpi"><div class="label"><span class="swatch ok"></span>Conforme</div><div class="val ok">${ok}</div><div class="foot">dentro do padrão</div></div>
+  </div>`;
+  const grid=document.getElementById('macroGrid');grid.innerHTML='';
+  const nome={alta:'Crítico',media:'Atenção',ok:'Conforme'};
+  orderedCats().forEach(cat=>{const c=criticidadeCategoria(cat);
+    const rows=Object.entries(CATS[cat].analises).map(([n,o])=>{const v=last(o.serie),f=faixaAnalise(v,o.limite);
+      return `<div class="mini-row"><span>${n}</span><span class="v ${f}">${v}% <span class="lim">/ ${o.limite}%</span></span></div>`;}).join('');
+    const sid=`sp_${cat.replace(/\W/g,'')}`;
+    grid.innerHTML+=`<div class="cat-card ${c.faixa}" onclick="goCat('${cat}')">
+      <div class="cat-top"><div class="cat-name">${cat}</div><div class="badge ${c.faixa}">${nome[c.faixa]}</div></div>
+      <div class="cat-worst">Pior: <b>${c.analise}</b> · ${c.valor}%</div>
+      <div class="sparkwrap"><canvas id="${sid}"></canvas></div>
+      ${rows}<div class="drill-hint">abrir →</div></div>`;
+  });
+  orderedCats().forEach(cat=>{const c=criticidadeCategoria(cat);const ctx=document.getElementById(`sp_${cat.replace(/\W/g,'')}`);if(!ctx)return;
+    const serie=CATS[cat].analises[c.analise].serie;
+    const col=c.faixa==='alta'?'#e5484d':c.faixa==='media'?'#e8952a':'#22a06b';
+    charts.push(new Chart(ctx,{type:'line',data:{labels:LABELS,datasets:[{data:serie,borderColor:col,borderWidth:2,pointRadius:0,tension:.35,fill:true,backgroundColor:col+'1a'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}}));
+  });
+}
+
+function goCat(cat){
+  show('cat');setActiveNav(cat);clearCharts();
+  document.getElementById('crumb').innerHTML=`<a onclick="goMacro()">Macro geral</a> › <span class="cur">${cat}</span>`;
+  document.getElementById('catTitle').textContent=cat;
+  const wrap=document.getElementById('catDetail');wrap.innerHTML='';
+  const analises=CATS[cat].analises,produtos=CATS[cat].produtos;let idx=0;const ids=[];
+  for(const [nome,obj] of Object.entries(analises)){
+    const cid=`c_${cat.replace(/\W/g,'')}_${idx++}`;ids.push([cid,nome,obj]);
+    const v=last(obj.serie),f=faixaAnalise(v,obj.limite);
+    const plist=Object.entries(produtos).filter(([pn,pd])=>pd[nome]).map(([pn,pd])=>{const pv=last(pd[nome]),pf=faixaAnalise(pv,obj.limite);
+      return `<div class="prod-item" onclick="goProd('${cat}','${pn}')"><span>${pn}</span><span class="pv v ${pf}">${pv}%</span></div>`;}).join('');
+    wrap.innerHTML+=`<div class="analise-card">
+      <div class="analise-head"><div class="analise-name">${nome}</div><span class="badge ${f}">${v}%</span></div>
+      <div class="analise-faixa">Limite desta categoria: <b>${obj.limite}%</b></div>
+      <div class="chart-box"><canvas id="${cid}"></canvas></div>
+      <div class="prod-list">${plist}</div></div>`;
+  }
+  ids.forEach(([cid,nome,obj])=>{const ctx=document.getElementById(cid);if(!ctx)return;
+    charts.push(new Chart(ctx,{type:'line',data:{labels:LABELS,datasets:[
+      {label:nome,data:obj.serie,borderColor:CANALISE[nome]||'#005EB8',backgroundColor:(CANALISE[nome]||'#005EB8')+'12',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},
+      {label:'Limite',data:Array(8).fill(obj.limite),borderColor:'#9aa5b1',borderDash:[5,4],borderWidth:1.5,pointRadius:0}]},options:miniOpts()}));
+  });
+}
+
+function goProd(cat,prod){
+  show('prod');setActiveNav(cat);clearCharts();
+  document.getElementById('crumb').innerHTML=`<a onclick="goMacro()">Macro geral</a> › <a onclick="goCat('${cat}')">${cat}</a> › <span class="cur">${prod}</span>`;
+  document.getElementById('prodTitle').textContent=`${prod} — ${cat}`;
+  document.getElementById('prodHint').textContent=`Todas as análises de ${prod}, cada uma contra a faixa da categoria ${cat}.`;
+  const pd=CATS[cat].produtos[prod],analises=CATS[cat].analises;
+  const dsLine=[],barL=[],barV=[],barC=[];let statsHTML='';
+  for(const [nome,serie] of Object.entries(pd)){const color=CANALISE[nome]||'#005EB8';
+    dsLine.push({label:nome,data:serie,borderColor:color,backgroundColor:color+'10',fill:false,tension:.3,borderWidth:2.5,pointRadius:3});
+    dsLine.push({label:`Limite ${nome}`,data:Array(8).fill(analises[nome].limite),borderColor:color,borderDash:[5,4],borderWidth:1,pointRadius:0});
+    barL.push(nome.replace('Bolores e Leveduras','Bolores/Lev.').replace('Coliformes 30°C','Coliformes'));barV.push(last(serie));barC.push(color);
+    const v=last(serie),f=faixaAnalise(v,analises[nome].limite);
+    statsHTML+=`<div class="statlet"><div class="l">${nome}</div><div class="n v ${f}">${v}% <span class="lim" style="font-size:12px">/ lim ${analises[nome].limite}%</span></div></div>`;
+  }
+  document.getElementById('prodStats').innerHTML=statsHTML;
+  charts.push(new Chart(document.getElementById('prodLine'),{type:'line',data:{labels:LABELS,datasets:dsLine},options:fullOpts()}));
+  charts.push(new Chart(document.getElementById('prodBar'),{type:'bar',data:{labels:barL,datasets:[{data:barV,backgroundColor:barC,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y+'%'}}},
+      scales:{y:{beginAtZero:true,grid:{color:'#eef1f5'},ticks:{color:'#6b7684',callback:v=>v+'%'}},x:{grid:{display:false},ticks:{color:'#1e2733',font:{size:10}}}}}}));
+}
+
+function miniOpts(){return{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}},
+  scales:{y:{beginAtZero:true,grid:{color:'#eef1f5'},ticks:{color:'#6b7684',callback:v=>v+'%',font:{size:9}}},x:{grid:{display:false},ticks:{color:'#9aa5b1',font:{size:9}}}}};}
+function fullOpts(){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  plugins:{legend:{labels:{color:'#1e2733',usePointStyle:true,padding:16,font:{size:12},filter:i=>!i.text.startsWith('Limite')}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y}%`}}},
+  scales:{y:{beginAtZero:true,grid:{color:'#eef1f5'},ticks:{color:'#6b7684',callback:v=>v+'%'}},x:{grid:{color:'#f4f6f9'},ticks:{color:'#6b7684'}}}};}
+
+function show(v){
+  document.getElementById('view-macro').classList.toggle('hidden',v!=='macro');
+  document.getElementById('view-cat').classList.toggle('hidden',v!=='cat');
+  document.getElementById('view-prod').classList.toggle('hidden',v!=='prod');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function boot(){
+  if(typeof Chart==='undefined'){
+    document.querySelector('.main').insertAdjacentHTML('afterbegin',
+      '<div style="background:#fdecec;border:1px solid #f5c2c2;color:#a12622;padding:16px 20px;border-radius:12px;margin-bottom:20px;font-size:14px">Não foi possível carregar a biblioteca de gráficos (Chart.js). Verifique a conexão com a internet e recarregue a página. Os gráficos aparecem assim que a biblioteca carregar.</div>');
+  }
+  buildNav();goMacro();
+}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',boot);}else{boot();}
+</script>
+</body>
+</html>

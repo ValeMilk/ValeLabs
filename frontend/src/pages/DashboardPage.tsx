@@ -12,8 +12,10 @@ import {
   RefreshCw,
   Beaker,
   ArrowLeft,
+  Home,
 } from 'lucide-react';
 import ProgressMetricCard, { type SeriesPoint } from '../components/ui/progress-metric-card';
+import { motion } from 'framer-motion';
 
 interface ProdutoData {
   nome: string;
@@ -443,250 +445,328 @@ export function DashboardPage() {
   const totalAtrasadas = categorias.reduce((s, c) => s + c.atrasadas, 0);
   const totalInoculadas = categorias.reduce((s, c) => s + c.inoculadas, 0);
 
+  // Ordenar categorias por criticidade
+  const categoriasOrdenadas = [...categorias].sort((a, b) => {
+    const rankA = a.criticidade === Criticidade.CRÍTICO ? 3 : a.criticidade === Criticidade.ATENÇÃO ? 2 : 1;
+    const rankB = b.criticidade === Criticidade.CRÍTICO ? 3 : b.criticidade === Criticidade.ATENÇÃO ? 2 : 1;
+    return rankB - rankA;
+  });
+
+  // Função auxiliar para obter cor e ícone por criticidade
+  const getCriticidadeConfig = (crit: Criticidade) => {
+    switch (crit) {
+      case Criticidade.CRÍTICO:
+        return { color: 'bg-red-50 border-l-red-500', dot: 'bg-red-500', text: 'text-red-700', label: 'Crítico' };
+      case Criticidade.ATENÇÃO:
+        return { color: 'bg-amber-50 border-l-amber-500', dot: 'bg-amber-500', text: 'text-amber-700', label: 'Atenção' };
+      default:
+        return { color: 'bg-green-50 border-l-green-500', dot: 'bg-green-500', text: 'text-green-700', label: 'Conforme' };
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-            <p className="text-sm text-gray-500">
-              Acompanhamento microbiológico dinâmico
-            </p>
-          </div>
-          <button
-            onClick={carregarCategorias}
-            className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-          >
-            <RefreshCw size={16} />
-            <span>Atualizar</span>
-          </button>
+    <div className="flex h-screen bg-gray-50">
+      {/* SIDEBAR */}
+      <motion.aside
+        initial={{ x: -280 }}
+        animate={{ x: 0 }}
+        className="w-72 bg-white border-r border-gray-200 overflow-y-auto sticky top-0 h-screen shadow-sm"
+      >
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-lg font-bold text-gray-900">Vale<span className="text-blue-600">Milk</span></h1>
+          <p className="text-xs text-gray-500 mt-1">Acompanhamento Microbiológico</p>
         </div>
 
-        {erro && (
-          <div className="mb-6 bg-red-50 border border-red-300 rounded-lg p-3 flex items-center space-x-3">
-            <AlertCircle className="text-red-600" size={20} />
-            <p className="text-red-800 text-sm">{erro}</p>
-          </div>
-        )}
-
-        {/* Alertas de fluxo (ciclo) */}
-        {totalAtrasadas > 0 && (
-          <div className="mb-4 bg-orange-50 border border-orange-300 rounded-lg p-3 flex items-center space-x-3">
-            <Clock className="text-orange-600" size={20} />
-            <p className="text-orange-800 text-sm">
-              <span className="font-semibold">{totalAtrasadas}</span> análise(s)
-              com leitura atrasada — verifique fluxo de incubação.
-            </p>
-          </div>
-        )}
-
-        {/* Stats principais — Eixo Ciclo */}
-        <div className="mb-4">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Fluxo de Análise
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard
-              icon={<Package className="text-blue-600" size={22} />}
-              label="Total"
-              value={totalAnalises}
-              color="border-l-blue-600"
-            />
-            <StatCard
-              icon={<Beaker className="text-blue-600" size={22} />}
-              label="Inoculadas"
-              value={totalInoculadas}
-              color="border-l-blue-500"
-            />
-            <StatCard
-              icon={<Clock className="text-yellow-600" size={22} />}
-              label="Aguardando Leitura"
-              value={totalAguardando}
-              extra={
-                totalAtrasadas > 0
-                  ? `${totalAtrasadas} atrasada(s)`
-                  : undefined
-              }
-              extraColor="text-orange-600"
-              color="border-l-yellow-500"
-            />
-            <StatCard
-              icon={<CheckCircle className="text-gray-600" size={22} />}
-              label="Lidas"
-              value={totalLidas}
-              color="border-l-gray-500"
-            />
+        {/* KPI Mini */}
+        <div className="px-4 py-4 border-b border-gray-100">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Resumo Geral</p>
+          <div className="space-y-2">
+            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
+              <p className="text-xs text-gray-600">Total de Análises</p>
+              <p className="text-2xl font-bold text-blue-600">{totalAnalises}</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+              <p className="text-xs text-gray-600">Aprovadas</p>
+              <p className="text-xl font-bold text-green-600">{totalAprovadas}</p>
+            </div>
+            <div className="bg-red-50 rounded-lg p-3 border border-red-100">
+              <p className="text-xs text-gray-600">Reprovadas</p>
+              <p className="text-xl font-bold text-red-600">{totalReprovadas}</p>
+            </div>
           </div>
         </div>
 
-        {/* Stats — Eixo Conformidade */}
-        <div className="mb-6">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Conformidade (apenas análises lidas)
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <StatCard
-              icon={<CheckCircle className="text-green-600" size={22} />}
-              label="Aprovadas"
-              value={totalAprovadas}
-              color="border-l-green-600"
-              valueColor="text-green-700"
-            />
-            <StatCard
-              icon={<AlertCircle className="text-red-600" size={22} />}
-              label="Reprovadas"
-              value={totalReprovadas}
-              extra={
-                totalLidas > 0
-                  ? `${Math.round((totalReprovadas / totalLidas) * 100)}% do total lido`
-                  : undefined
-              }
-              extraColor="text-red-600"
-              color="border-l-red-600"
-              valueColor="text-red-700"
-            />
-            <StatCard
-              icon={<AlertTriangle className="text-purple-600" size={22} />}
-              label="Sem Padrão"
-              value={categorias.reduce((s, c) => s + c.semPadrao, 0)}
-              color="border-l-purple-600"
-              valueColor="text-purple-700"
-            />
-          </div>
-        </div>
-
-        {/* Categorias */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-gray-800">
-            Categorias de Produtos
-          </h2>
-          <span className="text-xs text-gray-500">
-            {categorias.length} categoria(s)
-          </span>
-        </div>
-
-        {categorias.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center border border-gray-100">
-            <Beaker className="mx-auto text-gray-400 mb-3" size={48} />
-            <p className="text-gray-700 font-medium">
-              Nenhuma categoria encontrada
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              Cadastre lançamentos para popular o dashboard
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categorias.map((cat) => {
-              const style = criticidadeStyle(cat.criticidade);
-              const taxaAprovacao =
-                cat.lidas > 0
-                  ? Math.round((cat.aprovadas / cat.lidas) * 100)
-                  : 0;
-
+        {/* Categorias Menu */}
+        <div className="px-3 py-4">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 mb-3">Categorias</p>
+          <div className="space-y-1">
+            {categoriasOrdenadas.map((cat) => {
+              const config = getCriticidadeConfig(cat.criticidade);
               return (
-                <div
+                <motion.button
                   key={cat.categoria}
-                  onClick={() => carregarProdutos(cat.categoria)}
-                  className={`bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 border-l-4 ${style.border} cursor-pointer`}
+                  whileHover={{ x: 4 }}
+                  onClick={() => {
+                    carregarProdutos(cat.categoria);
+                    setCategoriaSelecionada(cat.categoria);
+                  }}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border-l-4 transition-all ${config.color} hover:shadow-sm ${
+                    categoriaSelecionada === cat.categoria ? 'bg-white shadow-sm' : ''
+                  }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-800">
-                        {cat.categoria}
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        {cat.totalAnalises} análise(s)
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-bold ${style.badge} flex items-center space-x-1`}
-                    >
-                      {style.icon}
-                      <span>{style.label}</span>
-                    </span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${config.dot}`}></div>
+                    <span className="text-sm font-medium text-gray-900">{cat.categoria}</span>
                   </div>
-
-                  {/* Taxa de aprovação (só das lidas) */}
-                  {cat.lidas > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-600">
-                          Taxa de aprovação (lidas)
-                        </span>
-                        <span className="text-xs font-bold text-gray-800">
-                          {taxaAprovacao}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5">
-                        <div
-                          className={`${style.bar} h-1.5 rounded-full transition-all`}
-                          style={{ width: `${taxaAprovacao}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Grid de contadores */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <MiniStat
-                      label="Aprovadas"
-                      value={cat.aprovadas}
-                      valueClass="text-green-700"
-                      bg="bg-green-50"
-                    />
-                    <MiniStat
-                      label="Reprovadas"
-                      value={cat.reprovadas}
-                      valueClass="text-red-700"
-                      bg="bg-red-50"
-                    />
-                    <MiniStat
-                      label="Aguardando"
-                      value={cat.aguardandoLeitura}
-                      valueClass="text-yellow-700"
-                      bg="bg-yellow-50"
-                    />
-                    <MiniStat
-                      label="Inoculadas"
-                      value={cat.inoculadas}
-                      valueClass="text-blue-700"
-                      bg="bg-blue-50"
-                    />
+                  <div className="text-xs text-gray-600 ml-4">
+                    {cat.lidas > 0 ? Math.round((cat.aprovadas / cat.lidas) * 100) : 0}% aprovação
                   </div>
-
-                  {(cat.atrasadas > 0 || cat.semPadrao > 0) && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
-                      {cat.atrasadas > 0 && (
-                        <div className="flex items-center space-x-2 text-xs text-orange-700">
-                          <Clock size={14} />
-                          <span>
-                            <span className="font-semibold">
-                              {cat.atrasadas}
-                            </span>{' '}
-                            leitura(s) atrasada(s)
-                          </span>
-                        </div>
-                      )}
-                      {cat.semPadrao > 0 && (
-                        <div className="flex items-center space-x-2 text-xs text-purple-700">
-                          <AlertTriangle size={14} />
-                          <span>
-                            <span className="font-semibold">
-                              {cat.semPadrao}
-                            </span>{' '}
-                            sem padrão cadastrado
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                </motion.button>
               );
             })}
           </div>
+        </div>
+      </motion.aside>
+
+      {/* MAIN */}
+      <main className="flex-1 overflow-y-auto">
+        {/* NÍVEL 1: Macro */}
+        {!categoriaSelecionada && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 max-w-7xl"
+          >
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">Visão Geral</h2>
+              <p className="text-gray-600">Acompanhamento microbiológico de todas as categorias</p>
+            </div>
+
+            {/* KPI Grid */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Categorias</p>
+                <p className="text-3xl font-bold text-gray-900">{categorias.length}</p>
+              </div>
+              <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
+                <p className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Crítico</p>
+                <p className="text-3xl font-bold text-red-600">
+                  {categorias.filter(c => c.criticidade === Criticidade.CRÍTICO).length}
+                </p>
+              </div>
+              <div className="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-6">
+                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Atenção</p>
+                <p className="text-3xl font-bold text-amber-600">
+                  {categorias.filter(c => c.criticidade === Criticidade.ATENÇÃO).length}
+                </p>
+              </div>
+              <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-6">
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2">Conforme</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {categorias.filter(c => c.criticidade === Criticidade.CONFORME).length}
+                </p>
+              </div>
+            </div>
+
+            {/* Categorias Grid */}
+            {categorias.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-12 text-center border border-gray-200">
+                <Beaker className="mx-auto text-gray-400 mb-4" size={48} />
+                <p className="text-gray-700 font-medium text-lg">Nenhuma categoria encontrada</p>
+                <p className="text-sm text-gray-500 mt-2">Cadastre lançamentos para popular o dashboard</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-6">
+                {categoriasOrdenadas.map((cat) => {
+                  const config = getCriticidadeConfig(cat.criticidade);
+                  const taxaAprovacao = cat.lidas > 0 ? Math.round((cat.aprovadas / cat.lidas) * 100) : 0;
+                  return (
+                    <motion.div
+                      key={cat.categoria}
+                      whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}
+                      onClick={() => {
+                        carregarProdutos(cat.categoria);
+                        setCategoriaSelecionada(cat.categoria);
+                      }}
+                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 cursor-pointer transition-all ${config.color}`}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900">{cat.categoria}</h3>
+                          <p className="text-sm text-gray-600 mt-1">{cat.totalAnalises} análise(s)</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.text} bg-white border border-current/20`}>
+                          {config.label}
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      {cat.lidas > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-600">Taxa de aprovação</span>
+                            <span className="text-sm font-bold text-gray-800">{taxaAprovacao}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${taxaAprovacao}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                              className={`h-2 rounded-full ${
+                                taxaAprovacao > 75 ? 'bg-green-500' : taxaAprovacao > 50 ? 'bg-amber-500' : 'bg-red-500'
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Mini Stats */}
+                      <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-200">
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Aprovadas</p>
+                          <p className="text-lg font-bold text-green-600">{cat.aprovadas}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Reprovadas</p>
+                          <p className="text-lg font-bold text-red-600">{cat.reprovadas}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium">Aguardando</p>
+                          <p className="text-lg font-bold text-amber-600">{cat.aguardandoLeitura}</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
         )}
-      </div>
+
+        {/* NÍVEL 2: Produtos */}
+        {categoriaSelecionada && !produtoSelecionado && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 max-w-7xl"
+          >
+            <div className="mb-6 flex items-center gap-3">
+              <motion.button
+                whileHover={{ x: -4 }}
+                onClick={() => setCategoriaSelecionada(null)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft size={18} />
+                Voltar
+              </motion.button>
+              <span className="text-gray-400">/</span>
+              <h2 className="text-2xl font-bold text-gray-900">{categoriaSelecionada}</h2>
+            </div>
+
+            {carregandoDetalhe ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-6">
+                {produtos.map((prod) => {
+                  const taxaAprovacao = prod.historico.length > 0
+                    ? Math.round(
+                        (prod.historico.filter(h => {
+                          const val = h.value;
+                          return val < 50;
+                        }).length / prod.historico.length) * 100
+                      )
+                    : 0;
+                  return (
+                    <motion.div
+                      key={prod.nome}
+                      whileHover={{ y: -4 }}
+                      onClick={() => {
+                        setProdutoSelecionado(prod.nome);
+                        carregarMicroorganismosProduto(categoriaSelecionada, prod.nome);
+                      }}
+                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all"
+                    >
+                      <h3 className="text-lg font-bold text-gray-900 mb-4">{prod.nome}</h3>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className="text-xs text-gray-600 font-medium mb-1">Taxa de Aprovação</p>
+                          <p className="text-3xl font-bold text-blue-600">{Math.round((100 - prod.percentualReprovacao))}%</p>
+                        </div>
+                        <Home size={32} className="text-gray-300" />
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-600">
+                        {prod.historico.length} análise(s) registrada(s)
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* NÍVEL 3: Microrganismos */}
+        {categoriaSelecionada && produtoSelecionado && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 max-w-7xl"
+          >
+            <div className="mb-6 flex items-center gap-3">
+              <motion.button
+                whileHover={{ x: -4 }}
+                onClick={() => setProdutoSelecionado(null)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft size={18} />
+                Voltar
+              </motion.button>
+              <span className="text-gray-400">/</span>
+              <span className="text-sm text-gray-600">{categoriaSelecionada}</span>
+              <span className="text-gray-400">/</span>
+              <h2 className="text-2xl font-bold text-gray-900">{produtoSelecionado}</h2>
+            </div>
+
+            {carregandoDetalhe ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-6">
+                {microrganismos.map((micro) => (
+                  <motion.div
+                    key={micro.nome}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+                  >
+                    <ProgressMetricCard
+                      title={micro.nome}
+                      total={micro.mediaResultado?.toFixed(1)}
+                      data={micro.historico}
+                      size="md"
+                      accent={
+                        micro.percentualReprovacao > 50
+                          ? 'rose'
+                          : micro.percentualReprovacao > 25
+                          ? 'amber'
+                          : 'emerald'
+                      }
+                      loading={carregandoDetalhe}
+                      valueFormatter={(v) => `${v.toFixed(1)}`}
+                      dateFormatter={(d) => new Date(d).toLocaleDateString('pt-BR')}
+                      unit=""
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </main>
+    </div>
   );
 }
 
