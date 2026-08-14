@@ -201,8 +201,8 @@ export function DashboardPage() {
         );
         
         // Calcular percentualReprovacao do microrganismo
-        const analisesDoMicro = analises.filter(a => a.microrganismo === microNome);
-        const totalReprovados = analisesDoMicro.filter(a => a.statusConformidade === 'REPROVADO').length;
+        const analisesDoMicro = analises.filter((a: any) => a.microrganismo === microNome);
+        const totalReprovados = analisesDoMicro.filter((a: any) => a.statusConformidade === 'REPROVADO').length;
         const total = analisesDoMicro.length;
         
         agrupadoMicro[microNome].percentualReprovacao = total > 0 
