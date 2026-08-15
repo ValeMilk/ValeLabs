@@ -1,17 +1,12 @@
 # Stage 1: Build
 FROM node:20-alpine as builder
 
-WORKDIR /app
-
-# Install git and clone repo
-RUN apk add --no-cache git
-
-RUN git clone https://github.com/ValeMilk/ValeLabs.git .
-
 WORKDIR /app/frontend
 
-# Install dependencies
+COPY package*.json ./
 RUN npm install
+
+COPY . .
 
 # Build with API URL injected
 RUN VITE_API_URL=/api npm run build

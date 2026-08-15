@@ -1,31 +1,23 @@
 # Etapa 1: Build
 FROM node:20-alpine AS builder
 
-WORKDIR /app
-
-# Clone do repositório
-RUN apk add --no-cache git && \
-    git clone https://github.com/ValeMilk/ValeLabs.git .
-
 WORKDIR /app/backend
 
-RUN npm install && \
-    chmod +x node_modules/.bin/* && \
-    npm run build
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
 
 # Etapa 2: Runtime
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Clone do repositório (apenas arquivo necessários)
-RUN apk add --no-cache git && \
-    git clone https://github.com/ValeMilk/ValeLabs.git . && \
-    cd backend && \
-    npm install --omit=dev
+COPY package*.json ./
+RUN npm install --omit=dev
 
 # Copiar build da etapa anterior
-WORKDIR /app/backend
 COPY --from=builder /app/backend/dist ./dist
 
 # Expor porta

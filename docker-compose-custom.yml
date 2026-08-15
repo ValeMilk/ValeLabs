@@ -32,7 +32,7 @@ services:
     ports:
       - "3002:3001"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3001
       - MONGO_URI=${MONGO_URI}
       - MONGO_DB_NAME=valelabs_microbio

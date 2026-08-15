@@ -7,10 +7,23 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcryptjs from "bcryptjs";
 
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    console.error(`❌ Variável de ambiente obrigatória ausente: ${name}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/valelabs";
-const JWT_SECRET = process.env.JWT_SECRET || "sua-chave-secreta-aqui";
+const JWT_SECRET = requireEnv("JWT_SECRET");
+
+// Endpoints de seed/populate só ficam ativos com opt-in explícito — nunca por padrão,
+// mesmo que NODE_ENV esteja ausente ou mal configurado em produção.
+const ALLOW_DEV_ENDPOINTS = process.env.NODE_ENV !== "production" && process.env.ALLOW_DEV_SEED === "true";
 
 // ========== MIDDLEWARE ==========
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
@@ -224,10 +237,9 @@ app.get("/api/auth/usuarios", async (req, res) => {
 
 app.post("/api/auth/seed", async (req, res) => {
   try {
-    // Permitir seed apenas em ambiente de desenvolvimento
-    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === "development";
-    if (!isDev) {
-      return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
+    // Requer opt-in explícito via ALLOW_DEV_SEED=true — nunca habilitado por padrão
+    if (!ALLOW_DEV_ENDPOINTS) {
+      return res.status(403).json({ sucesso: false, mensagem: "Não permitido" });
     }
     // Droppar collection pra remover índices antigos
     await Usuario.collection.drop().catch(() => {});
@@ -355,9 +367,9 @@ app.delete("/api/admin/usuarios/:id", autenticar, autorizarAdmin, async (req, re
 // POPULATE TEST DATA
 app.post("/api/data/populate", async (req, res) => {
   try {
-    const isDev = !process.env.NODE_ENV || process.env.NODE_ENV === "development";
-    if (!isDev) {
-      return res.status(403).json({ sucesso: false, mensagem: "Não permitido em produção" });
+    // Requer opt-in explícito via ALLOW_DEV_SEED=true — nunca habilitado por padrão
+    if (!ALLOW_DEV_ENDPOINTS) {
+      return res.status(403).json({ sucesso: false, mensagem: "Não permitido" });
     }
 
     // Limpar dados antigos

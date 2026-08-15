@@ -1,25 +1,22 @@
+# Build a partir da raiz do repositório (contexto = raiz, não backend/)
 # Etapa 1: Build
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Clone do repositório
-RUN apk add --no-cache git && \
-    git clone https://github.com/ValeMilk/ValeLabs.git . && \
-    cd backend && \
-    npm install && \
-    npm run build
+COPY backend/package*.json ./
+RUN npm install
+
+COPY backend/ .
+RUN npm run build
 
 # Etapa 2: Runtime
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/backend
 
-# Clone do repositório (apenas arquivo necessários)
-RUN apk add --no-cache git && \
-    git clone https://github.com/ValeMilk/ValeLabs.git . && \
-    cd backend && \
-    npm install --omit=dev
+COPY backend/package*.json ./
+RUN npm install --omit=dev
 
 # Copiar build da etapa anterior
 COPY --from=builder /app/backend/dist ./dist
