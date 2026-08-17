@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { api, getUsuario } from '../services/api';
 import type { Analise, Produto } from '../types/shared-types';
+import { podeGerenciar } from '../lib/perfis';
 import { Plus, X, Check, Trash2, Edit2 } from 'lucide-react';
 
 interface Padrao {
@@ -56,6 +57,9 @@ export function LancamentosPage() {
   const [edicao, setEdicao] = useState<EdicaoInline>({ lote: '', ponto: '', resultado: '' });
 
   const pontosColeta = ['Único', 'Início', 'Meio', 'Fim', 'Base'];
+
+  // O perfil Qualidade apenas registra leituras: edita análises, mas não cria nem deleta.
+  const podeCriarEDeletar = podeGerenciar(getUsuario()?.perfil);
 
   useEffect(() => {
     carregarDados();
@@ -300,7 +304,7 @@ export function LancamentosPage() {
           <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
           <p className="text-gray-600">Registre novas análises de laboratório</p>
         </div>
-        {!mostraNovaLinha && (
+        {!mostraNovaLinha && podeCriarEDeletar && (
           <button
             onClick={() => setMostraNovaLinha(true)}
             className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -633,14 +637,16 @@ export function LancamentosPage() {
                                 <Edit2 size={14} />
                                 <span className="text-xs">Editar</span>
                               </button>
-                              <button
-                                onClick={() => handleDeletarAnalise(analise._id)}
-                                className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"
-                                title="Deletar análise"
-                              >
-                                <Trash2 size={14} />
-                                <span className="text-xs">Deletar</span>
-                              </button>
+                              {podeCriarEDeletar && (
+                                <button
+                                  onClick={() => handleDeletarAnalise(analise._id)}
+                                  className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                                  title="Deletar análise"
+                                >
+                                  <Trash2 size={14} />
+                                  <span className="text-xs">Deletar</span>
+                                </button>
+                              )}
                             </>
                           )}
                         </div>

@@ -2,6 +2,7 @@ import { ReactNode, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, LayoutDashboard, FileText, Package, CheckCircle, Eye, Microscope, Users } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
+import { ehAdmin, podeGerenciar } from '../lib/perfis';
 import { ExpandableTabs } from './ui/expandable-tabs';
 
 interface LayoutProps {
@@ -18,22 +19,26 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  // Definir todas as abas disponíveis com seus ícones
-  const allTabs = [
-    { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { title: 'Lançamentos', icon: FileText, path: '/lancamentos' },
-    { title: 'Produtos', icon: Package, path: '/categorias' },
-    { title: 'Padrões', icon: CheckCircle, path: '/padroes' },
-    ...(usuario?.perfil === 'Admin' || usuario?.perfil === 'Diretora' || usuario?.perfil === 'Supervisora Qualidade'
-      ? [{ title: 'Auditoria', icon: Eye, path: '/auditoria' }]
-      : []),
-    ...(usuario?.perfil === 'Admin'
-      ? [
-          { title: 'Microrganismos', icon: Microscope, path: '/microrganismos' },
-          { title: 'Usuários', icon: Users, path: '/usuarios' },
-        ]
-      : []),
-  ];
+  // Abas por perfil: Qualidade só opera Dashboard e Lançamentos; os demais
+  // perfis gerenciam os cadastros, e só o Admin administra usuários.
+  // Memoizado pelo perfil — getUsuario() devolve um objeto novo a cada render.
+  const perfil = usuario?.perfil;
+  const allTabs = useMemo(
+    () => [
+      { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { title: 'Lançamentos', icon: FileText, path: '/lancamentos' },
+      ...(podeGerenciar(perfil)
+        ? [
+            { title: 'Produtos', icon: Package, path: '/categorias' },
+            { title: 'Padrões', icon: CheckCircle, path: '/padroes' },
+            { title: 'Auditoria', icon: Eye, path: '/auditoria' },
+            { title: 'Microrganismos', icon: Microscope, path: '/microrganismos' },
+          ]
+        : []),
+      ...(ehAdmin(perfil) ? [{ title: 'Usuários', icon: Users, path: '/usuarios' }] : []),
+    ],
+    [perfil]
+  );
 
   // Encontrar o índice da aba ativa
   const selectedIndex = useMemo(() => {

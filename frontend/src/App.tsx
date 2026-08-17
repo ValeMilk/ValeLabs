@@ -10,6 +10,7 @@ import { MicroorganismoPage } from './pages/MicroorganismoPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { AuditoriaPage } from './pages/AuditoriaPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { PERFIL_ADMIN, PERFIS_GESTAO } from './lib/perfis';
 
 function App() {
   return (
@@ -38,7 +39,7 @@ function App() {
         <Route
           path="/categorias"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
               <CategoriaPage />
             </ProtectedRoute>
           }
@@ -47,7 +48,7 @@ function App() {
         <Route
           path="/produtos/:produtoId"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
               <ProdutoPage />
             </ProtectedRoute>
           }
@@ -65,7 +66,7 @@ function App() {
         <Route
           path="/padroes"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
               <PadroesPage />
             </ProtectedRoute>
           }
@@ -74,7 +75,7 @@ function App() {
         <Route
           path="/microrganismos"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
               <MicroorganismoPage />
             </ProtectedRoute>
           }
@@ -83,7 +84,7 @@ function App() {
         <Route
           path="/usuarios"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIL_ADMIN}>
               <UsuariosPage />
             </ProtectedRoute>
           }
@@ -92,7 +93,7 @@ function App() {
         <Route
           path="/auditoria"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
               <AuditoriaPage />
             </ProtectedRoute>
           }

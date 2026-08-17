@@ -149,6 +149,8 @@ function autorizarAdmin(req: any, res: any, next: any) {
   next();
 }
 
+// Perfis de gestão. Atenção ao nome: este middleware BLOQUEIA o perfil "Qualidade",
+// que é operacional e só pode registrar leituras (editar análises).
 function autorizarQualidade(req: any, res: any, next: any) {
   if (!req.usuario) {
     return res.status(401).json({ sucesso: false, mensagem: "Não autenticado" });
@@ -1062,7 +1064,8 @@ app.get("/api/analises", autenticar, async (req, res) => {
   }
 });
 
-app.post("/api/analises", autenticar, async (req, res) => {
+// Criar análise é ação de gestão — o perfil Qualidade apenas registra leituras (PATCH).
+app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const { categoria, produto, microrganismo, pontoColeta, resultado, lote, dataInoculacao, dataPrevistaLeitura } = req.body;
 
@@ -1182,8 +1185,8 @@ app.patch("/api/analises/:id", autenticar, async (req, res) => {
   }
 });
 
-// DELETE deletar análise
-app.delete("/api/analises/:id", autenticar, async (req, res) => {
+// DELETE deletar análise — indisponível para o perfil Qualidade.
+app.delete("/api/analises/:id", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const analise = await Analise.findByIdAndDelete(req.params.id);
 
