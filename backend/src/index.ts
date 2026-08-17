@@ -116,12 +116,30 @@ const auditoriaPadraoSchema = new mongoose.Schema({
   descricao: String
 });
 
+const auditoriaAnaliseSchema = new mongoose.Schema({
+  analiseId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario", index: true },
+  usuarioNome: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now, index: -1 },
+  acao: { type: String, enum: ["criar", "editar", "deletar"], required: true },
+  // Identificação copiada no momento do registro: o log precisa continuar
+  // legível mesmo depois que a análise for excluída.
+  produtoNome: String,
+  microrganismo: String,
+  categoria: String,
+  lote: String,
+  dados: mongoose.Schema.Types.Mixed,
+  dadosAntigos: mongoose.Schema.Types.Mixed,
+  descricao: String
+});
+
 const Usuario = mongoose.model("Usuario", usuarioSchema);
 const Produto = mongoose.model("Produto", produtoSchema);
 const Padrao = mongoose.model("Padrao", padraoSchema);
 const Microrganismo = mongoose.model("Microrganismo", microrganismoSchema);
 const Analise = mongoose.model("Analise", analiseSchema);
 const AuditoriaPadrao = mongoose.model("AuditoriaPadrao", auditoriaPadraoSchema);
+const AuditoriaAnalise = mongoose.model("AuditoriaAnalise", auditoriaAnaliseSchema);
 
 // ========== MIDDLEWARE AUTENTICAÇÃO & AUTORIZAÇÃO ==========
 function autenticar(req: any, res: any, next: any) {
@@ -185,6 +203,35 @@ async function registrarAuditoriaPadrao(
     await auditoria.save();
   } catch (erro) {
     console.error("Erro ao registrar auditoria:", erro);
+  }
+}
+
+// A auditoria nunca deve derrubar a operação que a originou: falhas aqui são
+// apenas logadas, e o lançamento em si segue válido.
+async function registrarAuditoriaAnalise(
+  analise: any,
+  usuario: any,
+  acao: "criar" | "editar" | "deletar",
+  dados: any,
+  dadosAntigos?: any,
+  descricao?: string
+) {
+  try {
+    await new AuditoriaAnalise({
+      analiseId: analise._id,
+      usuarioId: mongoose.isValidObjectId(usuario?.id) ? usuario.id : undefined,
+      usuarioNome: usuario?.nome || "Sistema",
+      acao,
+      produtoNome: analise.produtoNome || "",
+      microrganismo: analise.microrganismo || "",
+      categoria: analise.categoria || "",
+      lote: analise.lote || "",
+      dados,
+      dadosAntigos,
+      descricao
+    }).save();
+  } catch (erro) {
+    console.error("Erro ao registrar auditoria de análise:", erro);
   }
 }
 
@@ -1120,6 +1167,21 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
 
     await analise.save();
 
+    await registrarAuditoriaAnalise(
+      analise,
+      (req as any).usuario,
+      "criar",
+      {
+        lote: analise.lote,
+        pontoColeta: analise.pontoColeta,
+        resultado: analise.resultado,
+        statusConformidade: analise.statusConformidade,
+        statusCiclo: analise.statusCiclo
+      },
+      undefined,
+      `Lançamento criado: ${produtoNome} × ${microrganismo}${analise.lote ? ` (lote ${analise.lote})` : ""}`
+    );
+
     return res.status(201).json({
       sucesso: true,
       dados: analise
@@ -1179,6 +1241,40 @@ app.patch("/api/analises/:id", autenticar, async (req, res) => {
       { new: true }
     );
 
+    // Só registra o que realmente mudou — reenviar os mesmos valores não vira log.
+    const rotulos: Record<string, string> = {
+      lote: "lote",
+      pontoColeta: "ponto de coleta",
+      resultado: "resultado",
+      statusConformidade: "conformidade",
+      statusCiclo: "ciclo"
+    };
+    const antes: any = {};
+    const depois: any = {};
+    const alteracoes: string[] = [];
+
+    for (const campo of Object.keys(dadosAtualizacao)) {
+      const valorAntigo = (analiseAtual as any)[campo] ?? null;
+      const valorNovo = (dadosAtualizacao as any)[campo] ?? null;
+      if (String(valorAntigo) === String(valorNovo)) continue;
+      antes[campo] = valorAntigo;
+      depois[campo] = valorNovo;
+      if (rotulos[campo]) {
+        alteracoes.push(`${rotulos[campo]}: ${valorAntigo ?? "vazio"} → ${valorNovo ?? "vazio"}`);
+      }
+    }
+
+    if (alteracoes.length > 0) {
+      await registrarAuditoriaAnalise(
+        analise,
+        (req as any).usuario,
+        "editar",
+        depois,
+        antes,
+        `Lançamento editado (${analiseAtual.produtoNome} × ${analiseAtual.microrganismo}): ${alteracoes.join(", ")}`
+      );
+    }
+
     return res.json({ sucesso: true, dados: analise });
   } catch (erro: any) {
     return res.status(500).json({ sucesso: false, erro: erro.message });
@@ -1194,6 +1290,20 @@ app.delete("/api/analises/:id", autenticar, autorizarQualidade, async (req, res)
       return res.status(404).json({ sucesso: false, mensagem: "Análise não encontrada" });
     }
 
+    await registrarAuditoriaAnalise(
+      analise,
+      (req as any).usuario,
+      "deletar",
+      {
+        lote: analise.lote,
+        pontoColeta: analise.pontoColeta,
+        resultado: analise.resultado,
+        statusConformidade: analise.statusConformidade
+      },
+      undefined,
+      `Lançamento excluído: ${analise.produtoNome} × ${analise.microrganismo}${analise.lote ? ` (lote ${analise.lote})` : ""}`
+    );
+
     return res.json({ sucesso: true, mensagem: "Análise deletada" });
   } catch (erro: any) {
     return res.status(500).json({ sucesso: false, erro: erro.message });
@@ -1201,6 +1311,25 @@ app.delete("/api/analises/:id", autenticar, autorizarQualidade, async (req, res)
 });
 
 // ========== AUDITORIA - GET LOGS ==========
+
+// Histórico de mudanças em lançamentos (criação, edição e exclusão de análises)
+app.get("/api/auditoria/analises", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const logs = await AuditoriaAnalise.find()
+      .sort({ timestamp: -1 })
+      .limit(500)
+      .lean();
+
+    res.json({
+      sucesso: true,
+      mensagem: "Logs de auditoria de lançamentos",
+      dados: logs
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
 app.get("/api/auditoria/padroes", autenticar, autorizarQualidade, async (req, res) => {
   try {
     const logs = await AuditoriaPadrao.find()
