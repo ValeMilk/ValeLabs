@@ -16,17 +16,18 @@ import type { DashboardDetalhe } from '../types/shared-types';
 import { formatarData } from '../types/shared-types';
 
 const AZUL = '#2a78d6';
+const VERDE = '#16A34A';
 const VERMELHO = '#E24B4A';
 const VERDE_ESCURO = '#166534';
 const VERMELHO_ESCURO = '#991B1B';
 
 interface ChartPonto {
+  /** Categoria do eixo X: o índice garante unicidade mesmo com leituras no mesmo minuto. */
+  indice: number;
   dataLabel: string;
   dataCompleta: string;
   resultado: number;
   status: string;
-  dentroFaixa: boolean;
-  [segmento: string]: string | number | boolean | null;
 }
 
 export function DetalhePage() {
@@ -78,9 +79,6 @@ export function DetalhePage() {
 
   const { categoria, padrao, kpis, historico, tabela } = dados;
 
-  const dentroFaixa = (resultado: number) =>
-    !padrao || (resultado >= padrao.limiteMinimo && resultado <= padrao.limiteMaximo);
-
   // Eixo X adaptativo: quando várias análises caem no mesmo dia, a data sozinha
   // não distingue os pontos — nesse caso o rótulo passa a incluir a hora.
   const diasDistintos = new Set(historico.map((h) => new Date(h.data).toDateString()));
@@ -95,38 +93,16 @@ export function DetalhePage() {
     return formatarData(data);
   };
 
-  const pontos = historico.map((h) => ({
+  const chartData: ChartPonto[] = historico.map((h, i) => ({
+    indice: i,
     dataLabel: rotuloEixoX(h.data),
     dataCompleta: `${formatarData(h.data)} ${horaDeLeitura(h.data)}`,
     resultado: h.resultado,
     status: h.status as string,
-    dentroFaixa: dentroFaixa(h.resultado),
   }));
 
-  // Segmentos coloridos: trechos consecutivos de mesma cor viram uma única série.
-  // Todas as séries compartilham o mesmo dataset (valores nulos fora do trecho),
-  // senão o Recharts duplicaria as categorias do eixo X.
-  const trechos: { inicio: number; fim: number; cor: string }[] = [];
-  for (let i = 0; i < pontos.length - 1; i++) {
-    const cor = !pontos[i].dentroFaixa || !pontos[i + 1].dentroFaixa ? VERMELHO : AZUL;
-    const ultimo = trechos[trechos.length - 1];
-    if (ultimo && ultimo.cor === cor && ultimo.fim === i) {
-      ultimo.fim = i + 1;
-    } else {
-      trechos.push({ inicio: i, fim: i + 1, cor });
-    }
-  }
-
-  const chartData: ChartPonto[] = pontos.map((p, i) => {
-    const linha: ChartPonto = { ...p };
-    trechos.forEach((t, idx) => {
-      linha[`seg${idx}`] = i >= t.inicio && i <= t.fim ? p.resultado : null;
-    });
-    return linha;
-  });
-
   // Eixo Y dinâmico: padding proporcional ao maior valor entre padrão e dados reais.
-  const valores = pontos.map((p) => p.resultado);
+  const valores = chartData.map((p) => p.resultado);
   const maiorResultado = valores.length ? Math.max(...valores) : padrao?.limiteMaximo ?? 0;
   const menorResultado = valores.length ? Math.min(...valores) : 0;
   const limiteMax = padrao?.limiteMaximo ?? maiorResultado;
@@ -135,26 +111,29 @@ export function DetalhePage() {
   const yMin = Math.min(0, menorResultado) - padding;
   const yMax = Math.max(limiteMax, maiorResultado) + padding;
 
+  const corDoStatus = (status: string) =>
+    status === 'REPROVADO' ? VERMELHO : status === 'APROVADO' ? VERDE : '#9CA3AF';
+
   const CustomDot = (props: any) => {
     const { cx, cy, payload } = props;
     if (cx === undefined || cy === undefined) return null;
-    const cor = payload.status === 'REPROVADO' ? VERMELHO : AZUL;
-    return <circle cx={cx} cy={cy} r={5} fill={cor} stroke="#fff" strokeWidth={2} />;
+    return (
+      <circle cx={cx} cy={cy} r={5} fill={corDoStatus(payload.status)} stroke="#fff" strokeWidth={2} />
+    );
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
-    const item = payload.find((p: any) => p.dataKey === 'resultado');
-    if (!item) return null;
-    const ponto: ChartPonto = item.payload;
+    const ponto: ChartPonto = payload[0].payload;
+    const reprovada = ponto.status === 'REPROVADO';
     return (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
         <p className="text-xs text-gray-500 mb-0.5">{ponto.dataCompleta}</p>
         <p className="font-semibold text-gray-900">
           {ponto.resultado} {padrao?.unidade}
         </p>
-        <p className={ponto.status === 'REPROVADO' ? 'text-red-600' : 'text-green-600'}>
-          {ponto.status === 'REPROVADO' ? 'Reprovada' : 'Aprovada'}
+        <p className={reprovada ? 'text-red-600' : 'text-green-600'}>
+          {reprovada ? 'Reprovada' : 'Aprovada'}
         </p>
       </div>
     );
@@ -220,7 +199,13 @@ export function DetalhePage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 24, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="dataLabel" tick={{ fontSize: 12, fill: '#6b7280' }} minTickGap={16} />
+                <XAxis
+                  dataKey="indice"
+                  type="category"
+                  tickFormatter={(i: number) => chartData[i]?.dataLabel ?? ''}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                  minTickGap={16}
+                />
                 <YAxis domain={[yMin, yMax]} tick={{ fontSize: 12, fill: '#6b7280' }} width={48} />
                 <Tooltip content={<CustomTooltip />} />
 
@@ -241,29 +226,33 @@ export function DetalhePage() {
                   />
                 )}
 
-                {trechos.map((t, i) => (
-                  <Line
-                    key={`seg${i}`}
-                    dataKey={`seg${i}`}
-                    stroke={t.cor}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={false}
-                    connectNulls={false}
-                    isAnimationActive={false}
-                    legendType="none"
-                  />
-                ))}
                 <Line
                   dataKey="resultado"
-                  stroke="none"
+                  stroke={AZUL}
+                  strokeWidth={2}
                   dot={<CustomDot />}
-                  activeDot={{ r: 6 }}
+                  activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }}
                   isAnimationActive={false}
                   legendType="none"
                 />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+        )}
+        {chartData.length > 0 && (
+          <div className="flex flex-wrap items-center gap-5 mt-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-white ring-1 ring-gray-200" style={{ backgroundColor: VERDE }} />
+              <span className="text-xs text-gray-600">Aprovada</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full border-2 border-white ring-1 ring-gray-200" style={{ backgroundColor: VERMELHO }} />
+              <span className="text-xs text-gray-600">Reprovada</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-0.5 rounded" style={{ backgroundColor: AZUL }} />
+              <span className="text-xs text-gray-600">Resultado ({padrao?.unidade ?? 'valor'})</span>
+            </div>
           </div>
         )}
       </div>
