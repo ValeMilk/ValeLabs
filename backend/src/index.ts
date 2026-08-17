@@ -505,72 +505,168 @@ app.get("/api/auth/me", autenticar, async (req, res) => {
 });
 
 // DASHBOARD
-app.get("/api/dashboard/categorias", autenticar, async (req, res) => {
+
+// Status efetivo de uma análise, calculado a partir das datas em vez de confiar
+// no statusCiclo gravado (que não é atualizado automaticamente com o tempo).
+function statusCicloEfetivo(analise: any, hoje: Date): "lida" | "atrasada" | "vence_hoje" | "aguardando" {
+  if (analise.dataRealLeitura) return "lida";
+  const prevista = analise.dataPrevistaLeitura ? new Date(analise.dataPrevistaLeitura) : null;
+  if (!prevista) return "aguardando";
+  const previstaDia = new Date(prevista);
+  previstaDia.setHours(0, 0, 0, 0);
+  if (previstaDia < hoje) return "atrasada";
+  if (previstaDia.getTime() === hoje.getTime()) return "vence_hoje";
+  return "aguardando";
+}
+
+// Nível 2: mapa de calor Produto × Microrganismo, ranking dos piores pares e backlog de leituras
+app.get("/api/dashboard/heatmap", autenticar, async (req, res) => {
   try {
-    const analises = await Analise.find({});
+    const analises = await Analise.find({}).lean();
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    const categorias = new Map();
+
+    const pares = new Map<string, {
+      produto: string; microrganismo: string; categoria: string;
+      avaliadas: number; aprovadas: number; reprovadas: number;
+    }>();
+    const backlog: any[] = [];
+
+    let aprovadasTotal = 0;
+    let reprovadasTotal = 0;
 
     for (const analise of analises) {
-      const cat = analise.categoria || "Sem Categoria";
-      if (!categorias.has(cat)) {
-        categorias.set(cat, {
-          categoria: cat,
-          totalAnalises: 0,
-          // Eixo 1: Ciclo
-          inoculadas: 0,
-          aguardandoLeitura: 0,
-          atrasadas: 0,
-          lidas: 0,
-          // Eixo 2: Conformidade (só das lidas)
+      const produto = (analise as any).produtoNome || "Sem produto";
+      const microrganismo = analise.microrganismo || "Desconhecido";
+      const chave = `${produto}|||${microrganismo}`;
+
+      if (!pares.has(chave)) {
+        pares.set(chave, {
+          produto,
+          microrganismo,
+          categoria: analise.categoria || "",
+          avaliadas: 0,
           aprovadas: 0,
-          reprovadas: 0,
-          semPadrao: 0,
-          pendentes: 0,
-          criticidade: "CONFORME"
+          reprovadas: 0
         });
       }
-      const stats = categorias.get(cat);
-      stats.totalAnalises++;
+      const par = pares.get(chave)!;
 
-      // Ciclo
-      if (analise.statusCiclo === "inoculada") {
-        stats.inoculadas++;
-      } else if (analise.statusCiclo === "aguardando_leitura") {
-        stats.aguardandoLeitura++;
-        const prev = analise.dataPrevistaLeitura ? new Date(analise.dataPrevistaLeitura) : null;
-        if (prev && prev < hoje) stats.atrasadas++;
-      } else if (analise.statusCiclo === "lida") {
-        stats.lidas++;
-      }
-
-      // Conformidade
       if (analise.statusConformidade === "APROVADO") {
-        stats.aprovadas++;
+        par.avaliadas++;
+        par.aprovadas++;
+        aprovadasTotal++;
       } else if (analise.statusConformidade === "REPROVADO") {
-        stats.reprovadas++;
-      } else if (analise.statusConformidade === "SEM_PADRÃO") {
-        stats.semPadrao++;
-      } else if (analise.statusConformidade === "PENDENTE") {
-        stats.pendentes++;
+        par.avaliadas++;
+        par.reprovadas++;
+        reprovadasTotal++;
+      }
+
+      const efetivo = statusCicloEfetivo(analise, hoje);
+      if (efetivo !== "lida") {
+        backlog.push({
+          id: analise._id,
+          produto,
+          microrganismo,
+          categoria: analise.categoria || "",
+          badge: efetivo === "atrasada" ? "atrasada" : efetivo === "vence_hoje" ? "vence_hoje" : "aguardando",
+          dataPrevistaLeitura: analise.dataPrevistaLeitura
+        });
       }
     }
 
-    // Criticidade: baseada em % de reprovação sobre as lidas
-    for (const stats of categorias.values()) {
-      const totalLidas = stats.lidas || 0;
-      const taxaReprov = totalLidas > 0 ? (stats.reprovadas / totalLidas) * 100 : 0;
-      if (taxaReprov >= 30) stats.criticidade = "CRÍTICO";
-      else if (taxaReprov >= 10 || stats.atrasadas > 0) stats.criticidade = "ATENÇÃO";
-      else stats.criticidade = "CONFORME";
-      stats.taxaReprovacao = Math.round(taxaReprov);
-    }
+    const celulas = Array.from(pares.values()).map((p) => ({
+      ...p,
+      percentual: p.avaliadas > 0 ? (p.reprovadas / p.avaliadas) * 100 : null
+    }));
+
+    const produtos = Array.from(new Set(celulas.map((c) => c.produto))).sort();
+    const microrganismos = Array.from(new Set(celulas.map((c) => c.microrganismo))).sort();
+
+    const topPares = celulas
+      .filter((c) => c.avaliadas > 0)
+      .sort((a, b) => (b.percentual || 0) - (a.percentual || 0))
+      .slice(0, 5);
+
+    backlog.sort((a, b) => {
+      if (a.badge === "atrasada" && b.badge !== "atrasada") return -1;
+      if (b.badge === "atrasada" && a.badge !== "atrasada") return 1;
+      return new Date(a.dataPrevistaLeitura).getTime() - new Date(b.dataPrevistaLeitura).getTime();
+    });
 
     res.json({
       sucesso: true,
-      mensagem: "Categorias carregadas",
-      dados: Array.from(categorias.values())
+      mensagem: "Mapa de calor carregado",
+      dados: {
+        kpis: {
+          total: analises.length,
+          aprovadas: aprovadasTotal,
+          reprovadas: reprovadasTotal
+        },
+        produtos,
+        microrganismos,
+        celulas,
+        topPares,
+        backlog
+      }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// Nível 3: detalhe de um par Produto × Microrganismo
+app.get("/api/dashboard/detalhe", autenticar, async (req, res) => {
+  try {
+    const produto = (req.query.produto as string) || "";
+    const micro = (req.query.micro as string) || "";
+
+    if (!produto || !micro) {
+      return res.status(400).json({ sucesso: false, mensagem: "Parâmetros produto e micro são obrigatórios" });
+    }
+
+    const analises = await Analise.find({ produtoNome: produto, microrganismo: micro })
+      .sort({ dataInoculacao: -1 })
+      .lean();
+
+    const categoria = analises[0]?.categoria || "";
+    const padrao = await Padrao.findOne({ categoria, microrganismo: micro, ativo: true }).lean();
+
+    const aprovadas = analises.filter((a) => a.statusConformidade === "APROVADO").length;
+    const reprovadas = analises.filter((a) => a.statusConformidade === "REPROVADO").length;
+    const aguardando = analises.filter((a) => a.statusConformidade === "PENDENTE").length;
+
+    const historico = analises
+      .filter((a) => a.dataRealLeitura && typeof a.resultado === "number")
+      .map((a) => ({
+        data: a.dataRealLeitura,
+        resultado: a.resultado,
+        status: a.statusConformidade
+      }))
+      .sort((a, b) => new Date(a.data!).getTime() - new Date(b.data!).getTime());
+
+    const tabela = analises.map((a) => ({
+      dataInoculacao: a.dataInoculacao,
+      dataLeitura: a.dataRealLeitura,
+      pontoColeta: a.pontoColeta,
+      resultado: a.resultado,
+      statusConformidade: a.statusConformidade
+    }));
+
+    res.json({
+      sucesso: true,
+      mensagem: "Detalhe carregado",
+      dados: {
+        produto,
+        microrganismo: micro,
+        categoria,
+        padrao: padrao
+          ? { limiteMinimo: padrao.limiteMinimo, limiteMaximo: padrao.limiteMaximo, unidade: padrao.unidade }
+          : null,
+        kpis: { total: analises.length, aprovadas, reprovadas, aguardando },
+        historico,
+        tabela
+      }
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });
@@ -978,7 +1074,8 @@ app.post("/api/analises", autenticar, async (req, res) => {
     const produtoNome = produtoDoc?.nome || produto;
     
     let statusConformidade = "PENDENTE";
-    if (padrao && resultado !== null && resultado !== undefined) {
+    const temResultado = resultado !== null && resultado !== undefined && resultado !== "";
+    if (padrao && temResultado) {
       const res_num = parseFloat(resultado);
       if (res_num >= padrao.limiteMinimo && res_num <= padrao.limiteMaximo) {
         statusConformidade = "APROVADO";
@@ -987,16 +1084,27 @@ app.post("/api/analises", autenticar, async (req, res) => {
       }
     }
 
+    const dataPrevistaLeituraFinal = dataPrevistaLeitura ? new Date(dataPrevistaLeitura) : new Date();
+    const agora = new Date();
+    // Um resultado informado na criação significa que a análise já foi lida agora.
+    // Sem resultado, o ciclo depende apenas da data prevista de leitura.
+    const statusCiclo = temResultado
+      ? "lida"
+      : dataPrevistaLeituraFinal <= agora
+        ? "aguardando_leitura"
+        : "inoculada";
+
     const analise = new Analise({
       dataInoculacao: dataInoculacao ? new Date(dataInoculacao) : new Date(),
-      dataPrevistaLeitura: dataPrevistaLeitura ? new Date(dataPrevistaLeitura) : new Date(),
+      dataPrevistaLeitura: dataPrevistaLeituraFinal,
+      dataRealLeitura: temResultado ? agora : null,
       produtoId: produto,
       produtoNome: produtoNome,
       categoria,
       pontoColeta,
       microrganismo,
-      resultado: resultado ? parseFloat(resultado) : null,
-      statusCiclo: "inoculada",
+      resultado: temResultado ? parseFloat(resultado) : null,
+      statusCiclo,
       statusConformidade: statusConformidade,
       criadoPor: (req as any).usuario?.nome || "Sistema"
     });
@@ -1016,16 +1124,38 @@ app.post("/api/analises", autenticar, async (req, res) => {
 app.patch("/api/analises/:id", autenticar, async (req, res) => {
   try {
     const { resultado } = req.body;
-    
-    const analise = await Analise.findByIdAndUpdate(
-      req.params.id,
-      { resultado: resultado ? parseFloat(resultado) : null },
-      { new: true }
-    );
 
-    if (!analise) {
+    const analiseAtual = await Analise.findById(req.params.id);
+    if (!analiseAtual) {
       return res.status(404).json({ sucesso: false, mensagem: "Análise não encontrada" });
     }
+
+    const temResultado = resultado !== null && resultado !== undefined && resultado !== "";
+    const dadosAtualizacao: any = {
+      resultado: temResultado ? parseFloat(resultado) : null
+    };
+
+    if (temResultado) {
+      const padrao = await Padrao.findOne({
+        categoria: analiseAtual.categoria,
+        microrganismo: analiseAtual.microrganismo,
+        ativo: true
+      });
+      const res_num = parseFloat(resultado);
+      dadosAtualizacao.statusConformidade = !padrao
+        ? "SEM_PADRÃO"
+        : res_num >= padrao.limiteMinimo && res_num <= padrao.limiteMaximo
+          ? "APROVADO"
+          : "REPROVADO";
+      dadosAtualizacao.dataRealLeitura = new Date();
+      dadosAtualizacao.statusCiclo = "lida";
+    }
+
+    const analise = await Analise.findByIdAndUpdate(
+      req.params.id,
+      dadosAtualizacao,
+      { new: true }
+    );
 
     return res.json({ sucesso: true, dados: analise });
   } catch (erro: any) {

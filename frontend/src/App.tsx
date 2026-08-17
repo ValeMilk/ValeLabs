@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DetalhePage } from './pages/DetalhePage';
 import { CategoriaPage } from './pages/CategoriaPage';
 import { ProdutoPage } from './pages/ProdutoPage';
 import { LancamentosPage } from './pages/LancamentosPage';
@@ -21,6 +22,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/detalhe"
+          element={
+            <ProtectedRoute>
+              <DetalhePage />
             </ProtectedRoute>
           }
         />

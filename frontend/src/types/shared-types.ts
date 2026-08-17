@@ -183,6 +183,64 @@ export interface ComparacaoMicrorganismo {
   dataAnalise: Date;
 }
 
+// ========== DASHBOARD NÍVEL 2 / NÍVEL 3 ==========
+
+export interface HeatmapCelula {
+  produto: string;
+  microrganismo: string;
+  categoria: string;
+  avaliadas: number;
+  aprovadas: number;
+  reprovadas: number;
+  percentual: number | null;
+}
+
+export interface BacklogItem {
+  id: string;
+  produto: string;
+  microrganismo: string;
+  categoria: string;
+  badge: 'atrasada' | 'vence_hoje' | 'aguardando';
+  dataPrevistaLeitura: string;
+}
+
+export interface DashboardHeatmap {
+  kpis: {
+    total: number;
+    aprovadas: number;
+    reprovadas: number;
+  };
+  produtos: string[];
+  microrganismos: string[];
+  celulas: HeatmapCelula[];
+  topPares: HeatmapCelula[];
+  backlog: BacklogItem[];
+}
+
+export interface DashboardDetalhePonto {
+  data: string;
+  resultado: number;
+  status: StatusConformidade;
+}
+
+export interface DashboardDetalheLinha {
+  dataInoculacao: string;
+  dataLeitura: string | null;
+  pontoColeta: string;
+  resultado: number | null;
+  statusConformidade: StatusConformidade;
+}
+
+export interface DashboardDetalhe {
+  produto: string;
+  microrganismo: string;
+  categoria: string;
+  padrao: { limiteMinimo: number; limiteMaximo: number; unidade: string } | null;
+  kpis: { total: number; aprovadas: number; reprovadas: number; aguardando: number };
+  historico: DashboardDetalhePonto[];
+  tabela: DashboardDetalheLinha[];
+}
+
 // ========== HELPER FUNCTIONS ==========
 
 export function calcularStatusCiclo(
