@@ -41,7 +41,9 @@ export interface Analise {
   dataInoculacao: Date;
   dataPrevistaLeitura: Date;
   dataRealLeitura: Date | null;
+  lote?: string;
   produtoId: string;
+  produtoNome?: string;
   categoria: string;
   pontoColeta: string;
   microrganismo: string;
@@ -200,7 +202,9 @@ export interface BacklogItem {
   produto: string;
   microrganismo: string;
   categoria: string;
+  lote: string;
   badge: 'atrasada' | 'vence_hoje' | 'aguardando';
+  dataInoculacao: string;
   dataPrevistaLeitura: string;
 }
 
@@ -224,6 +228,7 @@ export interface DashboardDetalhePonto {
 }
 
 export interface DashboardDetalheLinha {
+  lote: string;
   dataInoculacao: string;
   dataLeitura: string | null;
   pontoColeta: string;

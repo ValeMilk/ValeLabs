@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, Clock, ListChecks } from 'lucide-react';
 import { api } from '../services/api';
 import type { DashboardHeatmap } from '../types/shared-types';
-import { faixaReprovacao, tempoRelativo } from '../lib/dashboard';
+import { diasAguardando, faixaReprovacao } from '../lib/dashboard';
 
 export function DashboardPage() {
   const [dados, setDados] = useState<DashboardHeatmap | null>(null);
@@ -231,7 +231,10 @@ export function DashboardPage() {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{item.produto}</p>
-                    <p className="text-xs text-gray-500 truncate">{item.microrganismo}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {item.microrganismo}
+                      {item.lote && <span className="text-gray-400"> · Lote {item.lote}</span>}
+                    </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <span
@@ -243,7 +246,7 @@ export function DashboardPage() {
                     >
                       {item.badge === 'atrasada' ? 'Atrasada' : item.badge === 'vence_hoje' ? 'Vence hoje' : 'Aguardando'}
                     </span>
-                    <span className="text-xs text-gray-500">{tempoRelativo(item.dataPrevistaLeitura)}</span>
+                    <span className="text-xs text-gray-500">{diasAguardando(item.dataInoculacao)}</span>
                   </div>
                 </div>
               ))}

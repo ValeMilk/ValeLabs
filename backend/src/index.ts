@@ -82,6 +82,7 @@ const analiseSchema = new mongoose.Schema({
   dataInoculacao: { type: Date, required: true },
   dataPrevistaLeitura: { type: Date, required: true },
   dataRealLeitura: { type: Date, default: null },
+  lote: { type: String, default: "" },
   produtoId: { type: String, required: true },
   produtoNome: { type: String, default: "" },
   categoria: { type: String, required: true },
@@ -569,7 +570,9 @@ app.get("/api/dashboard/heatmap", autenticar, async (req, res) => {
           produto,
           microrganismo,
           categoria: analise.categoria || "",
+          lote: (analise as any).lote || "",
           badge: efetivo === "atrasada" ? "atrasada" : efetivo === "vence_hoje" ? "vence_hoje" : "aguardando",
+          dataInoculacao: analise.dataInoculacao,
           dataPrevistaLeitura: analise.dataPrevistaLeitura
         });
       }
@@ -646,6 +649,7 @@ app.get("/api/dashboard/detalhe", autenticar, async (req, res) => {
       .sort((a, b) => new Date(a.data!).getTime() - new Date(b.data!).getTime());
 
     const tabela = analises.map((a) => ({
+      lote: (a as any).lote || "",
       dataInoculacao: a.dataInoculacao,
       dataLeitura: a.dataRealLeitura,
       pontoColeta: a.pontoColeta,
@@ -1060,8 +1064,9 @@ app.get("/api/analises", autenticar, async (req, res) => {
 
 app.post("/api/analises", autenticar, async (req, res) => {
   try {
-    const { categoria, produto, microrganismo, pontoColeta, resultado, dataInoculacao, dataPrevistaLeitura } = req.body;
+    const { categoria, produto, microrganismo, pontoColeta, resultado, lote, dataInoculacao, dataPrevistaLeitura } = req.body;
 
+    // resultado e lote são opcionais: sem resultado a análise nasce PENDENTE.
     if (!categoria || !produto || !microrganismo || !pontoColeta) {
       return res.status(400).json({ sucesso: false, mensagem: "Campos obrigatórios faltando" });
     }
@@ -1098,6 +1103,7 @@ app.post("/api/analises", autenticar, async (req, res) => {
       dataInoculacao: dataInoculacao ? new Date(dataInoculacao) : new Date(),
       dataPrevistaLeitura: dataPrevistaLeituraFinal,
       dataRealLeitura: temResultado ? agora : null,
+      lote: lote?.trim() || "",
       produtoId: produto,
       produtoNome: produtoNome,
       categoria,
@@ -1123,17 +1129,30 @@ app.post("/api/analises", autenticar, async (req, res) => {
 // PATCH atualizar análise
 app.patch("/api/analises/:id", autenticar, async (req, res) => {
   try {
-    const { resultado } = req.body;
+    const { resultado, lote, pontoColeta } = req.body;
 
     const analiseAtual = await Analise.findById(req.params.id);
     if (!analiseAtual) {
       return res.status(404).json({ sucesso: false, mensagem: "Análise não encontrada" });
     }
 
+    const dadosAtualizacao: any = {};
+    if (lote !== undefined) dadosAtualizacao.lote = String(lote).trim();
+    if (pontoColeta !== undefined) dadosAtualizacao.pontoColeta = String(pontoColeta).trim();
+
+    // resultado só é tocado quando a chave vem no corpo — assim editar apenas o
+    // lote não apaga um resultado já registrado.
     const temResultado = resultado !== null && resultado !== undefined && resultado !== "";
-    const dadosAtualizacao: any = {
-      resultado: temResultado ? parseFloat(resultado) : null
-    };
+    if (resultado !== undefined) {
+      dadosAtualizacao.resultado = temResultado ? parseFloat(resultado) : null;
+      if (!temResultado) {
+        // Limpar o resultado devolve a análise ao estado pendente.
+        dadosAtualizacao.statusConformidade = "PENDENTE";
+        dadosAtualizacao.dataRealLeitura = null;
+        dadosAtualizacao.statusCiclo =
+          new Date(analiseAtual.dataPrevistaLeitura) <= new Date() ? "aguardando_leitura" : "inoculada";
+      }
+    }
 
     if (temResultado) {
       const padrao = await Padrao.findOne({

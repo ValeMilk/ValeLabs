@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import type { Analise, Produto, CriarAnaliseRequest } from '../types/shared-types';
+import type { Analise, Produto } from '../types/shared-types';
 import { Plus, X, Check, Trash2, Edit2 } from 'lucide-react';
 
 interface Padrao {
@@ -13,6 +13,7 @@ interface Padrao {
 }
 
 interface NovaAnaliseInline {
+  lote: string;
   categoria: string;
   produto: string;
   microrganismo: string;
@@ -21,6 +22,24 @@ interface NovaAnaliseInline {
   padraomaximo: number | '';
   resultado: string;
   status: 'APROVADO' | 'REPROVADO' | '';
+}
+
+const NOVA_ANALISE_VAZIA: NovaAnaliseInline = {
+  lote: '',
+  categoria: '',
+  produto: '',
+  microrganismo: '',
+  ponto: '',
+  padraominimo: '',
+  padraomaximo: '',
+  resultado: '',
+  status: '',
+};
+
+interface EdicaoInline {
+  lote: string;
+  ponto: string;
+  resultado: string;
 }
 
 export function LancamentosPage() {
@@ -32,16 +51,9 @@ export function LancamentosPage() {
   const [mensagem, setMensagem] = useState('');
   const [mostraNovaLinha, setMostraNovaLinha] = useState(false);
 
-  const [novaAnalise, setNovaAnalise] = useState<NovaAnaliseInline>({
-    categoria: '',
-    produto: '',
-    microrganismo: '',
-    ponto: '',
-    padraominimo: '',
-    padraomaximo: '',
-    resultado: '',
-    status: '',
-  });
+  const [novaAnalise, setNovaAnalise] = useState<NovaAnaliseInline>(NOVA_ANALISE_VAZIA);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [edicao, setEdicao] = useState<EdicaoInline>({ lote: '', ponto: '', resultado: '' });
 
   const pontosColeta = ['Único', 'Início', 'Meio', 'Fim', 'Base'];
 
@@ -185,18 +197,19 @@ export function LancamentosPage() {
   };
 
   const salvarNovaAnalise = async () => {
+    // Lote e resultado são opcionais — sem resultado a análise fica PENDENTE.
     if (
       !novaAnalise.categoria ||
       !novaAnalise.produto ||
       !novaAnalise.microrganismo ||
-      !novaAnalise.ponto ||
-      !novaAnalise.resultado
+      !novaAnalise.ponto
     ) {
-      setErro('Preencha todos os campos obrigatórios');
+      setErro('Preencha categoria, produto, microrganismo e ponto de coleta');
       return;
     }
 
     const payload = {
+      lote: novaAnalise.lote.trim(),
       produto: novaAnalise.produto,
       categoria: novaAnalise.categoria,
       microrganismo: novaAnalise.microrganismo,
@@ -209,16 +222,7 @@ export function LancamentosPage() {
     try {
       await api.post('/analises', payload);
       setMensagem('Análise lançada com sucesso!');
-      setNovaAnalise({
-        categoria: '',
-        produto: '',
-        microrganismo: '',
-        ponto: '',
-        padraominimo: '',
-        padraomaximo: '',
-        resultado: '',
-        status: '',
-      });
+      setNovaAnalise(NOVA_ANALISE_VAZIA);
       setMostraNovaLinha(false);
       setErro('');
       await carregarDados();
@@ -228,20 +232,43 @@ export function LancamentosPage() {
     }
   };
 
-  const cancelarNovaAnalise = () => {
-    setNovaAnalise({
-      categoria: '',
-      produto: '',
-      microrganismo: '',
-      ponto: '',
-      padraominimo: '',
-      padraomaximo: '',
-      resultado: '',
-      status: '',
+  const iniciarEdicao = (analise: Analise) => {
+    setEditandoId(analise._id || null);
+    setEdicao({
+      lote: analise.lote || '',
+      ponto: analise.pontoColeta || '',
+      resultado: analise.resultado !== null && analise.resultado !== undefined ? String(analise.resultado) : '',
     });
+    setErro('');
+  };
+
+  const salvarEdicao = async () => {
+    if (!editandoId) return;
+    try {
+      await api.patch(`/analises/${editandoId}`, {
+        lote: edicao.lote.trim(),
+        pontoColeta: edicao.ponto,
+        resultado: edicao.resultado.trim() === '' ? null : edicao.resultado.trim(),
+      });
+      setEditandoId(null);
+      setMensagem('Análise atualizada com sucesso!');
+      setErro('');
+      await carregarDados();
+      setTimeout(() => setMensagem(''), 3000);
+    } catch (err: any) {
+      setErro(err.response?.data?.mensagem || err.response?.data?.erro || 'Erro ao atualizar análise');
+    }
+  };
+
+  const cancelarNovaAnalise = () => {
+    setNovaAnalise(NOVA_ANALISE_VAZIA);
     setMostraNovaLinha(false);
     setErro('');
   };
+
+  // Padrão vigente da linha, para preencher as colunas Mín./Máx. do histórico.
+  const padraoDe = (categoria: string, microrganismo: string) =>
+    padroes.find((p) => p.categoria === categoria && p.microrganismo === microrganismo);
 
   const handleDeletarAnalise = (id: string | undefined) => {
     if (!id) return;
@@ -307,6 +334,9 @@ export function LancamentosPage() {
             <thead className="bg-gray-100 border-b">
               <tr>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Lote
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Categoria
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
@@ -339,6 +369,17 @@ export function LancamentosPage() {
               {/* Linha de Nova Análise */}
               {mostraNovaLinha && (
                 <tr className="bg-blue-50 hover:bg-blue-100">
+                  {/* Lote (opcional) */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={novaAnalise.lote}
+                      onChange={(e) => setNovaAnalise((prev) => ({ ...prev, lote: e.target.value }))}
+                      placeholder="Opcional"
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </td>
+
                   {/* Categoria */}
                   <td className="px-4 py-3">
                     <select
@@ -435,9 +476,8 @@ export function LancamentosPage() {
                       type="text"
                       value={novaAnalise.resultado}
                       onChange={(e) => handleResultadoChange(e.target.value)}
-                      placeholder="Digite o resultado"
+                      placeholder="Vazio = pendente"
                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      required
                     />
                   </td>
 
@@ -449,10 +489,10 @@ export function LancamentosPage() {
                           ? 'bg-green-100 text-green-800'
                           : novaAnalise.status === 'REPROVADO'
                           ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-500'
+                          : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
-                      {novaAnalise.status || '-'}
+                      {novaAnalise.status || 'PENDENTE'}
                     </span>
                   </td>
 
@@ -463,7 +503,7 @@ export function LancamentosPage() {
               {/* Linha de Ações */}
               {mostraNovaLinha && (
                 <tr className="bg-blue-50 border-t-2 border-indigo-300">
-                  <td colSpan={9} className="px-4 py-3">
+                  <td colSpan={10} className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={salvarNovaAnalise}
@@ -487,55 +527,127 @@ export function LancamentosPage() {
               {/* Análises existentes */}
               {analises.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
                     Nenhuma análise registrada
                   </td>
                 </tr>
               ) : (
-                analises.map((analise) => (
-                  <tr key={analise._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm">{analise.categoria}</td>
-                    <td className="px-4 py-3 text-sm">{getNomeProduto(analise.produtoId)}</td>
-                    <td className="px-4 py-3 text-sm">{analise.microrganismo}</td>
-                    <td className="px-4 py-3 text-sm">{analise.pontoColeta || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">-</td>
-                    <td className="px-4 py-3 text-sm text-gray-500">-</td>
-                    <td className="px-4 py-3 text-sm">{analise.resultado || '-'}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          analise.statusConformidade === 'APROVADO'
-                            ? 'bg-green-100 text-green-800'
-                            : analise.statusConformidade === 'REPROVADO'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {analise.statusConformidade}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => alert('Editar: ' + analise._id)}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                          title="Editar análise"
+                analises.map((analise) => {
+                  const padrao = padraoDe(analise.categoria, analise.microrganismo);
+                  const emEdicao = editandoId === analise._id;
+
+                  return (
+                    <tr key={analise._id} className={emEdicao ? 'bg-amber-50' : 'hover:bg-gray-50'}>
+                      <td className="px-4 py-3 text-sm">
+                        {emEdicao ? (
+                          <input
+                            type="text"
+                            value={edicao.lote}
+                            onChange={(e) => setEdicao((prev) => ({ ...prev, lote: e.target.value }))}
+                            placeholder="Opcional"
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        ) : (
+                          analise.lote || '-'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{analise.categoria}</td>
+                      <td className="px-4 py-3 text-sm">{analise.produtoNome || getNomeProduto(analise.produtoId)}</td>
+                      <td className="px-4 py-3 text-sm">{analise.microrganismo}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {emEdicao ? (
+                          <select
+                            value={edicao.ponto}
+                            onChange={(e) => setEdicao((prev) => ({ ...prev, ponto: e.target.value }))}
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="">Selecionar</option>
+                            {pontosColeta.map((ponto) => (
+                              <option key={ponto} value={ponto}>
+                                {ponto}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          analise.pontoColeta || '-'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{padrao ? padrao.limiteMinimo : '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{padrao ? padrao.limiteMaximo : '-'}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {emEdicao ? (
+                          <input
+                            type="text"
+                            value={edicao.resultado}
+                            onChange={(e) => setEdicao((prev) => ({ ...prev, resultado: e.target.value }))}
+                            placeholder="Vazio = pendente"
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        ) : analise.resultado !== null && analise.resultado !== undefined ? (
+                          analise.resultado
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            analise.statusConformidade === 'APROVADO'
+                              ? 'bg-green-100 text-green-800'
+                              : analise.statusConformidade === 'REPROVADO'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
                         >
-                          <Edit2 size={14} />
-                          <span className="text-xs">Editar</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeletarAnalise(analise._id)}
-                          className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"
-                          title="Deletar análise"
-                        >
-                          <Trash2 size={14} />
-                          <span className="text-xs">Deletar</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {analise.statusConformidade}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          {emEdicao ? (
+                            <>
+                              <button
+                                onClick={salvarEdicao}
+                                className="flex items-center space-x-1 text-green-700 hover:text-green-900 hover:bg-green-50 px-2 py-1 rounded transition-colors"
+                                title="Salvar alterações"
+                              >
+                                <Check size={14} />
+                                <span className="text-xs">Salvar</span>
+                              </button>
+                              <button
+                                onClick={() => setEditandoId(null)}
+                                className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                                title="Cancelar edição"
+                              >
+                                <X size={14} />
+                                <span className="text-xs">Cancelar</span>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => iniciarEdicao(analise)}
+                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                title="Editar análise"
+                              >
+                                <Edit2 size={14} />
+                                <span className="text-xs">Editar</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeletarAnalise(analise._id)}
+                                className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"
+                                title="Deletar análise"
+                              >
+                                <Trash2 size={14} />
+                                <span className="text-xs">Deletar</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

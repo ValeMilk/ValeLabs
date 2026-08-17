@@ -34,3 +34,13 @@ export function tempoRelativo(dataPrevista: string | Date): string {
   if (dias === 1) return 'amanhã';
   return `em ${dias} dias`;
 }
+
+/**
+ * Há quantos dias a análise está aguardando leitura, contando o dia da
+ * inoculação como o primeiro dia (inoculada hoje = "1 dia aguardando").
+ */
+export function diasAguardando(dataInoculacao: string | Date): string {
+  const dias = differenceInCalendarDays(new Date(), new Date(dataInoculacao)) + 1;
+  const total = Math.max(1, dias);
+  return `${total} dia${total === 1 ? '' : 's'} aguardando`;
+}
