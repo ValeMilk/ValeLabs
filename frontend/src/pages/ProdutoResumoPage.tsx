@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
 import type { DashboardProdutoResumo } from '../types/shared-types';
 import { formatarData } from '../types/shared-types';
-import { EvolucaoChart } from '../components/EvolucaoChart';
+import { EvolucaoMultiChart } from '../components/EvolucaoMultiChart';
 import { ConformidadePill } from '../components/ConformidadePill';
 
 export function ProdutoResumoPage() {
@@ -173,11 +173,9 @@ export function ProdutoResumoPage() {
           Evolução dos resultados
         </h2>
         <p className="text-xs text-gray-500 mb-4">
-          {filtroMicro
-            ? `Somente ${filtroMicro}`
-            : 'Todos os microrganismos — os limites de padrão variam por microrganismo e não são exibidos'}
+          Uma linha por microrganismo · os limites de padrão variam por microrganismo e não são exibidos
         </p>
-        <EvolucaoChart historico={historicoFiltrado} />
+        <EvolucaoMultiChart historico={historicoFiltrado} microrganismos={microrganismos} />
       </div>
 
       {/* Tabela histórica */}

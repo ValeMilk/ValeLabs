@@ -8,13 +8,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { formatarData } from '../types/shared-types';
-
-export const AZUL = '#2a78d6';
-export const VERDE = '#16A34A';
-export const VERMELHO = '#E24B4A';
-const VERDE_ESCURO = '#166534';
-const VERMELHO_ESCURO = '#991B1B';
+import {
+  AZUL,
+  VERDE,
+  VERMELHO,
+  VERDE_ESCURO,
+  VERMELHO_ESCURO,
+  criarRotuladorDeData,
+} from '../lib/chart';
 
 export interface PontoHistorico {
   data: string;
@@ -49,24 +50,12 @@ export function EvolucaoChart({ historico, padrao }: EvolucaoChartProps) {
     return <p className="text-gray-500 text-sm py-8 text-center">Ainda não há análises lidas.</p>;
   }
 
-  // Eixo X adaptativo: quando várias análises caem no mesmo dia, a data sozinha
-  // não distingue os pontos — nesse caso o rótulo passa a incluir a hora.
-  const diasDistintos = new Set(historico.map((h) => new Date(h.data).toDateString()));
-  const horaDeLeitura = (data: string) =>
-    new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const rotuloEixoX = (data: string) => {
-    if (diasDistintos.size <= 1) return horaDeLeitura(data);
-    if (diasDistintos.size < historico.length) {
-      const d = new Date(data);
-      return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${horaDeLeitura(data)}`;
-    }
-    return formatarData(data);
-  };
+  const rotulo = criarRotuladorDeData(historico.map((h) => h.data));
 
   const chartData: ChartPonto[] = historico.map((h, i) => ({
     indice: i,
-    dataLabel: rotuloEixoX(h.data),
-    dataCompleta: `${formatarData(h.data)} ${horaDeLeitura(h.data)}`,
+    dataLabel: rotulo.curto(h.data),
+    dataCompleta: rotulo.completo(h.data),
     resultado: h.resultado,
     status: h.status,
     microrganismo: h.microrganismo,
