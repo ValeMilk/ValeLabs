@@ -144,7 +144,9 @@ export function DetalhePage() {
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
-    const ponto: ChartPonto = payload[0].payload;
+    const item = payload.find((p: any) => p.dataKey === 'resultado');
+    if (!item) return null;
+    const ponto: ChartPonto = item.payload;
     return (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
         <p className="text-xs text-gray-500 mb-0.5">{ponto.dataCompleta}</p>
@@ -182,24 +184,29 @@ export function DetalhePage() {
       </p>
 
       {/* KPIs do par */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Total analisadas</p>
-          <p className="text-2xl font-bold text-blue-600">{kpis.total}</p>
-        </div>
-        <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-4">
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">Aprovadas</p>
-          <p className="text-2xl font-bold text-green-700">{kpis.aprovadas}</p>
-        </div>
-        <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-4">
-          <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Reprovadas</p>
-          <p className="text-2xl font-bold text-red-700">{kpis.reprovadas}</p>
-        </div>
-        <div className="bg-amber-50 rounded-lg shadow-sm border border-amber-200 p-4">
-          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Aguardando leitura</p>
-          <p className="text-2xl font-bold text-amber-700">{kpis.aguardando}</p>
-        </div>
-      </div>
+      {(() => {
+        const taxaReprovacao = kpis.total > 0 ? ((kpis.reprovadas / kpis.total) * 100).toFixed(1) : '0.0';
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Total analisadas</p>
+              <p className="text-2xl font-bold text-blue-600">{kpis.total}</p>
+            </div>
+            <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-4">
+              <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">Aprovadas</p>
+              <p className="text-2xl font-bold text-green-700">{kpis.aprovadas}</p>
+            </div>
+            <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-4">
+              <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Reprovadas</p>
+              <p className="text-2xl font-bold text-red-700">{kpis.reprovadas}</p>
+            </div>
+            <div className="bg-orange-50 rounded-lg shadow-sm border border-orange-200 p-4">
+              <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-1">Taxa de reprovação</p>
+              <p className="text-2xl font-bold text-orange-700">{taxaReprovacao}%</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Gráfico de evolução */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
