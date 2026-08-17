@@ -208,6 +208,14 @@ export interface BacklogItem {
   dataPrevistaLeitura: string;
 }
 
+export interface TotalProduto {
+  produto: string;
+  categoria: string;
+  avaliadas: number;
+  reprovadas: number;
+  percentual: number | null;
+}
+
 export interface DashboardHeatmap {
   kpis: {
     total: number;
@@ -217,8 +225,38 @@ export interface DashboardHeatmap {
   produtos: string[];
   microrganismos: string[];
   celulas: HeatmapCelula[];
+  totaisPorProduto: TotalProduto[];
   topPares: HeatmapCelula[];
   backlog: BacklogItem[];
+}
+
+export interface ProdutoResumoPonto {
+  data: string;
+  resultado: number;
+  status: StatusConformidade;
+  microrganismo: string;
+  lote: string;
+  unidade: string;
+}
+
+export interface ProdutoResumoLinha {
+  lote: string;
+  microrganismo: string;
+  dataInoculacao: string;
+  dataLeitura: string | null;
+  pontoColeta: string;
+  resultado: number | null;
+  unidade: string;
+  statusConformidade: StatusConformidade;
+}
+
+export interface DashboardProdutoResumo {
+  produto: string;
+  categoria: string;
+  microrganismos: string[];
+  kpis: { total: number; aprovadas: number; reprovadas: number; aguardando: number };
+  historico: ProdutoResumoPonto[];
+  tabela: ProdutoResumoLinha[];
 }
 
 export interface DashboardDetalhePonto {

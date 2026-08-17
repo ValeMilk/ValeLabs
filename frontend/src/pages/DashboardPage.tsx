@@ -49,10 +49,17 @@ export function DashboardPage() {
     );
   }
 
-  const { kpis, produtos, microrganismos, celulas, topPares, backlog } = dados;
+  const { kpis, produtos, microrganismos, celulas, totaisPorProduto, topPares, backlog } = dados;
 
   const celula = (produto: string, microrganismo: string) =>
     celulas.find((c) => c.produto === produto && c.microrganismo === microrganismo) || null;
+
+  const totalDoProduto = (produto: string) =>
+    totaisPorProduto.find((t) => t.produto === produto) || null;
+
+  const irParaResumoProduto = (produto: string) => {
+    navigate(`/dashboard/produto?produto=${encodeURIComponent(produto)}`);
+  };
 
   // Mesma base do mapa de calor: reprovação sobre as análises já lidas — análises
   // pendentes ainda não têm veredito e diluiriam a taxa se entrassem no denominador.
@@ -112,6 +119,9 @@ export function DashboardPage() {
                           {m}
                         </th>
                       ))}
+                      <th className="text-center text-xs font-semibold text-gray-700 uppercase tracking-wider px-2 py-2 whitespace-nowrap min-w-[5rem] border-l-2 border-gray-200">
+                        Total
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -145,6 +155,29 @@ export function DashboardPage() {
                             </td>
                           );
                         })}
+                        {/* TOTAL do produto — abre o resumo com todos os microrganismos */}
+                        {(() => {
+                          const t = totalDoProduto(p);
+                          const faixa = faixaReprovacao(t?.percentual ?? null);
+                          const temDados = !!t && t.avaliadas > 0;
+                          return (
+                            <td className="p-0 text-center align-middle min-w-[5rem] border-l-2 border-gray-200">
+                              <button
+                                type="button"
+                                onClick={() => irParaResumoProduto(p)}
+                                title={
+                                  temDados
+                                    ? `Resumo de ${p} — ${t!.reprovadas}/${t!.avaliadas} reprovadas`
+                                    : `Resumo de ${p}`
+                                }
+                                className="block w-full h-14 rounded-md text-sm font-bold cursor-pointer hover:scale-105 transition-transform ring-1 ring-inset ring-black/10"
+                                style={{ backgroundColor: faixa.bg, color: faixa.text }}
+                              >
+                                {temDados ? `${Math.round(t!.percentual!)}%` : '—'}
+                              </button>
+                            </td>
+                          );
+                        })()}
                       </tr>
                     ))}
                   </tbody>

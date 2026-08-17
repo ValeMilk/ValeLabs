@@ -640,6 +640,20 @@ app.get("/api/dashboard/heatmap", autenticar, async (req, res) => {
       .sort((a, b) => (b.percentual || 0) - (a.percentual || 0))
       .slice(0, 5);
 
+    // Coluna TOTAL do mapa de calor: reprovação do produto somando todos os microrganismos.
+    const totaisPorProduto = produtos.map((nome) => {
+      const doProduto = celulas.filter((c) => c.produto === nome);
+      const avaliadas = doProduto.reduce((s, c) => s + c.avaliadas, 0);
+      const reprovadas = doProduto.reduce((s, c) => s + c.reprovadas, 0);
+      return {
+        produto: nome,
+        categoria: doProduto[0]?.categoria || "",
+        avaliadas,
+        reprovadas,
+        percentual: avaliadas > 0 ? (reprovadas / avaliadas) * 100 : null
+      };
+    });
+
     backlog.sort((a, b) => {
       if (a.badge === "atrasada" && b.badge !== "atrasada") return -1;
       if (b.badge === "atrasada" && a.badge !== "atrasada") return 1;
@@ -658,6 +672,7 @@ app.get("/api/dashboard/heatmap", autenticar, async (req, res) => {
         produtos,
         microrganismos,
         celulas,
+        totaisPorProduto,
         topPares,
         backlog
       }
@@ -716,6 +731,70 @@ app.get("/api/dashboard/detalhe", autenticar, async (req, res) => {
         padrao: padrao
           ? { limiteMinimo: padrao.limiteMinimo, limiteMaximo: padrao.limiteMaximo, unidade: padrao.unidade }
           : null,
+        kpis: { total: analises.length, aprovadas, reprovadas, aguardando },
+        historico,
+        tabela
+      }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// Resumo do produto: mesmo formato do detalhe, porém somando todos os
+// microrganismos. Sem padrão único — cada microrganismo tem os seus limites,
+// então o gráfico não traz linhas de mínimo/máximo.
+app.get("/api/dashboard/produto", autenticar, async (req, res) => {
+  try {
+    const produto = (req.query.produto as string) || "";
+    if (!produto) {
+      return res.status(400).json({ sucesso: false, mensagem: "Parâmetro produto é obrigatório" });
+    }
+
+    const analises = await Analise.find({ produtoNome: produto })
+      .sort({ dataInoculacao: -1 })
+      .lean();
+
+    const categoria = analises[0]?.categoria || "";
+
+    // Unidade por microrganismo, para exibir junto de cada resultado.
+    const padroes = await Padrao.find({ categoria, ativo: true }).lean();
+    const unidadePorMicro = new Map(padroes.map((p) => [p.microrganismo, p.unidade]));
+
+    const aprovadas = analises.filter((a) => a.statusConformidade === "APROVADO").length;
+    const reprovadas = analises.filter((a) => a.statusConformidade === "REPROVADO").length;
+    const aguardando = analises.filter((a) => a.statusConformidade === "PENDENTE").length;
+
+    const historico = analises
+      .filter((a) => a.dataRealLeitura && typeof a.resultado === "number")
+      .map((a) => ({
+        data: a.dataRealLeitura,
+        resultado: a.resultado,
+        status: a.statusConformidade,
+        microrganismo: a.microrganismo,
+        lote: (a as any).lote || "",
+        unidade: unidadePorMicro.get(a.microrganismo) || ""
+      }))
+      .sort((a, b) => new Date(a.data!).getTime() - new Date(b.data!).getTime());
+
+    const tabela = analises.map((a) => ({
+      lote: (a as any).lote || "",
+      microrganismo: a.microrganismo,
+      dataInoculacao: a.dataInoculacao,
+      dataLeitura: a.dataRealLeitura,
+      pontoColeta: a.pontoColeta,
+      resultado: a.resultado,
+      unidade: unidadePorMicro.get(a.microrganismo) || "",
+      statusConformidade: a.statusConformidade
+    }));
+
+    res.json({
+      sucesso: true,
+      mensagem: "Resumo do produto carregado",
+      dados: {
+        produto,
+        categoria,
+        microrganismos: Array.from(new Set(analises.map((a) => a.microrganismo))).sort(),
         kpis: { total: analises.length, aprovadas, reprovadas, aguardando },
         historico,
         tabela

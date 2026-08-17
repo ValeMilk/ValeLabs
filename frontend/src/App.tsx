@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DetalhePage } from './pages/DetalhePage';
+import { ProdutoResumoPage } from './pages/ProdutoResumoPage';
 import { CategoriaPage } from './pages/CategoriaPage';
 import { ProdutoPage } from './pages/ProdutoPage';
 import { LancamentosPage } from './pages/LancamentosPage';
@@ -32,6 +33,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DetalhePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/produto"
+          element={
+            <ProtectedRoute>
+              <ProdutoResumoPage />
             </ProtectedRoute>
           }
         />
