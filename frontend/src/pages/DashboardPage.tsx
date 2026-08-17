@@ -54,13 +54,18 @@ export function DashboardPage() {
   const celula = (produto: string, microrganismo: string) =>
     celulas.find((c) => c.produto === produto && c.microrganismo === microrganismo) || null;
 
+  // Mesma base do mapa de calor: reprovação sobre as análises já lidas — análises
+  // pendentes ainda não têm veredito e diluiriam a taxa se entrassem no denominador.
+  const avaliadas = kpis.aprovadas + kpis.reprovadas;
+  const taxaReprovacaoGeral = avaliadas > 0 ? (kpis.reprovadas / avaliadas) * 100 : 0;
+
   return (
     <div className="max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold text-gray-900 mb-1">Acompanhamento Microbiológico</h1>
       <p className="text-gray-600 mb-8">Visão geral de produtos × microrganismos</p>
 
       {/* Seção 1 — KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Total de análises</p>
           <p className="text-3xl font-bold text-blue-600">{kpis.total}</p>
@@ -72,6 +77,13 @@ export function DashboardPage() {
         <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-6">
           <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">Reprovadas</p>
           <p className="text-3xl font-bold text-red-700">{kpis.reprovadas}</p>
+        </div>
+        <div className="bg-orange-50 rounded-lg shadow-sm border border-orange-200 p-6">
+          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-2">Taxa de reprovação</p>
+          <p className="text-3xl font-bold text-orange-700">{taxaReprovacaoGeral.toFixed(1)}%</p>
+          <p className="text-xs text-orange-700/70 mt-1">
+            {kpis.reprovadas} de {avaliadas} lida{avaliadas === 1 ? '' : 's'}
+          </p>
         </div>
       </div>
 

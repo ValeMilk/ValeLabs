@@ -164,7 +164,9 @@ export function DetalhePage() {
 
       {/* KPIs do par */}
       {(() => {
-        const taxaReprovacao = kpis.total > 0 ? ((kpis.reprovadas / kpis.total) * 100).toFixed(1) : '0.0';
+        // Mesma base do mapa de calor e do KPI macro: reprovadas sobre as lidas.
+        const avaliadas = kpis.aprovadas + kpis.reprovadas;
+        const taxaReprovacao = avaliadas > 0 ? ((kpis.reprovadas / avaliadas) * 100).toFixed(1) : '0.0';
         return (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
