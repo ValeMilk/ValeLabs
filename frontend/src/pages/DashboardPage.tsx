@@ -86,16 +86,16 @@ export function DashboardPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="min-w-full border-separate border-spacing-1">
+                <table className="w-auto border-separate border-spacing-1">
                   <thead>
                     <tr>
-                      <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 py-2 sticky left-0 bg-white">
+                      <th className="text-left text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 py-2 sticky left-0 bg-white z-10">
                         Produto
                       </th>
                       {microrganismos.map((m) => (
                         <th
                           key={m}
-                          className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 py-2 whitespace-nowrap"
+                          className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider px-2 py-2 whitespace-nowrap min-w-[5rem]"
                         >
                           {m}
                         </th>
@@ -105,7 +105,7 @@ export function DashboardPage() {
                   <tbody>
                     {produtos.map((p) => (
                       <tr key={p}>
-                        <td className="text-sm font-medium text-gray-900 px-3 py-2 whitespace-nowrap sticky left-0 bg-white">
+                        <td className="text-sm font-medium text-gray-900 px-3 py-2 whitespace-nowrap sticky left-0 bg-white z-10">
                           {p}
                         </td>
                         {microrganismos.map((m) => {
@@ -113,7 +113,7 @@ export function DashboardPage() {
                           const faixa = faixaReprovacao(c?.percentual ?? null);
                           const clicavel = !!c && c.percentual !== null && c.percentual > 0;
                           return (
-                            <td key={m} className="p-0">
+                            <td key={m} className="p-0 text-center align-middle min-w-[5rem]">
                               <button
                                 type="button"
                                 disabled={!clicavel}
@@ -123,7 +123,7 @@ export function DashboardPage() {
                                     ? `${c.reprovadas}/${c.avaliadas} reprovadas`
                                     : 'Sem análises lidas'
                                 }
-                                className={`w-20 h-14 rounded-md text-sm font-bold transition-transform ${
+                                className={`block w-full h-14 rounded-md text-sm font-bold transition-transform ${
                                   clicavel ? 'cursor-pointer hover:scale-105' : 'cursor-default'
                                 }`}
                                 style={{ backgroundColor: faixa.bg, color: faixa.text }}
@@ -200,7 +200,7 @@ export function DashboardPage() {
                       <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div
                           className="h-1.5 rounded-full"
-                          style={{ width: `${par.percentual}%`, backgroundColor: faixa.text }}
+                          style={{ width: `${par.percentual}%`, backgroundColor: faixa.bar }}
                         />
                       </div>
                     </div>

@@ -22,9 +22,11 @@ const VERMELHO_ESCURO = '#991B1B';
 
 interface ChartPonto {
   dataLabel: string;
+  dataCompleta: string;
   resultado: number;
   status: string;
   dentroFaixa: boolean;
+  [segmento: string]: string | number | boolean | null;
 }
 
 export function DetalhePage() {
@@ -79,15 +81,52 @@ export function DetalhePage() {
   const dentroFaixa = (resultado: number) =>
     !padrao || (resultado >= padrao.limiteMinimo && resultado <= padrao.limiteMaximo);
 
-  const chartData: ChartPonto[] = historico.map((h) => ({
-    dataLabel: formatarData(h.data),
+  // Eixo X adaptativo: quando várias análises caem no mesmo dia, a data sozinha
+  // não distingue os pontos — nesse caso o rótulo passa a incluir a hora.
+  const diasDistintos = new Set(historico.map((h) => new Date(h.data).toDateString()));
+  const horaDeLeitura = (data: string) =>
+    new Date(data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const rotuloEixoX = (data: string) => {
+    if (diasDistintos.size <= 1) return horaDeLeitura(data);
+    if (diasDistintos.size < historico.length) {
+      const d = new Date(data);
+      return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${horaDeLeitura(data)}`;
+    }
+    return formatarData(data);
+  };
+
+  const pontos = historico.map((h) => ({
+    dataLabel: rotuloEixoX(h.data),
+    dataCompleta: `${formatarData(h.data)} ${horaDeLeitura(h.data)}`,
     resultado: h.resultado,
-    status: h.status,
+    status: h.status as string,
     dentroFaixa: dentroFaixa(h.resultado),
   }));
 
+  // Segmentos coloridos: trechos consecutivos de mesma cor viram uma única série.
+  // Todas as séries compartilham o mesmo dataset (valores nulos fora do trecho),
+  // senão o Recharts duplicaria as categorias do eixo X.
+  const trechos: { inicio: number; fim: number; cor: string }[] = [];
+  for (let i = 0; i < pontos.length - 1; i++) {
+    const cor = !pontos[i].dentroFaixa || !pontos[i + 1].dentroFaixa ? VERMELHO : AZUL;
+    const ultimo = trechos[trechos.length - 1];
+    if (ultimo && ultimo.cor === cor && ultimo.fim === i) {
+      ultimo.fim = i + 1;
+    } else {
+      trechos.push({ inicio: i, fim: i + 1, cor });
+    }
+  }
+
+  const chartData: ChartPonto[] = pontos.map((p, i) => {
+    const linha: ChartPonto = { ...p };
+    trechos.forEach((t, idx) => {
+      linha[`seg${idx}`] = i >= t.inicio && i <= t.fim ? p.resultado : null;
+    });
+    return linha;
+  });
+
   // Eixo Y dinâmico: padding proporcional ao maior valor entre padrão e dados reais.
-  const valores = chartData.map((p) => p.resultado);
+  const valores = pontos.map((p) => p.resultado);
   const maiorResultado = valores.length ? Math.max(...valores) : padrao?.limiteMaximo ?? 0;
   const menorResultado = valores.length ? Math.min(...valores) : 0;
   const limiteMax = padrao?.limiteMaximo ?? maiorResultado;
@@ -95,13 +134,6 @@ export function DetalhePage() {
   const padding = referencia * 0.1;
   const yMin = Math.min(0, menorResultado) - padding;
   const yMax = Math.max(limiteMax, maiorResultado) + padding;
-
-  // Segmentos coloridos: azul quando ambas as pontas estão dentro da faixa, vermelho caso contrário.
-  const segmentos = chartData.slice(1).map((ponto, i) => {
-    const anterior = chartData[i];
-    const foraDaFaixa = !ponto.dentroFaixa || !anterior.dentroFaixa;
-    return { data: [anterior, ponto], cor: foraDaFaixa ? VERMELHO : AZUL };
-  });
 
   const CustomDot = (props: any) => {
     const { cx, cy, payload } = props;
@@ -115,6 +147,7 @@ export function DetalhePage() {
     const ponto: ChartPonto = payload[0].payload;
     return (
       <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
+        <p className="text-xs text-gray-500 mb-0.5">{ponto.dataCompleta}</p>
         <p className="font-semibold text-gray-900">
           {ponto.resultado} {padrao?.unidade}
         </p>
@@ -180,7 +213,7 @@ export function DetalhePage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 24, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="dataLabel" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                <XAxis dataKey="dataLabel" tick={{ fontSize: 12, fill: '#6b7280' }} minTickGap={16} />
                 <YAxis domain={[yMin, yMax]} tick={{ fontSize: 12, fill: '#6b7280' }} width={48} />
                 <Tooltip content={<CustomTooltip />} />
 
@@ -201,25 +234,26 @@ export function DetalhePage() {
                   />
                 )}
 
-                {segmentos.map((s, i) => (
+                {trechos.map((t, i) => (
                   <Line
-                    key={i}
-                    data={s.data}
-                    dataKey="resultado"
-                    stroke={s.cor}
+                    key={`seg${i}`}
+                    dataKey={`seg${i}`}
+                    stroke={t.cor}
                     strokeWidth={2}
                     dot={false}
+                    activeDot={false}
+                    connectNulls={false}
                     isAnimationActive={false}
                     legendType="none"
                   />
                 ))}
                 <Line
-                  data={chartData}
                   dataKey="resultado"
-                  stroke="transparent"
+                  stroke="none"
                   dot={<CustomDot />}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
+                  legendType="none"
                 />
               </LineChart>
             </ResponsiveContainer>
