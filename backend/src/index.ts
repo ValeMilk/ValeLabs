@@ -89,6 +89,7 @@ const analiseSchema = new mongoose.Schema({
   pontoColeta: { type: String, default: "" },
   microrganismo: { type: String, required: true },
   resultado: { type: mongoose.Schema.Types.Mixed, default: null },
+  observacoes: { type: String, default: "" },
   statusCiclo: { type: String, enum: ["inoculada", "aguardando_leitura", "lida"], default: "inoculada" },
   statusConformidade: { type: String, enum: ["APROVADO", "REPROVADO", "PENDENTE", "SEM_PADRÃO"], default: "PENDENTE" },
   padraoVigenteId: { type: String, default: null },
@@ -718,6 +719,7 @@ app.get("/api/dashboard/detalhe", autenticar, async (req, res) => {
       dataLeitura: a.dataRealLeitura,
       pontoColeta: a.pontoColeta,
       resultado: a.resultado,
+      observacoes: (a as any).observacoes || "",
       statusConformidade: a.statusConformidade
     }));
 
@@ -785,6 +787,7 @@ app.get("/api/dashboard/produto", autenticar, async (req, res) => {
       pontoColeta: a.pontoColeta,
       resultado: a.resultado,
       unidade: unidadePorMicro.get(a.microrganismo) || "",
+      observacoes: (a as any).observacoes || "",
       statusConformidade: a.statusConformidade
     }));
 
@@ -1193,7 +1196,7 @@ app.get("/api/analises", autenticar, async (req, res) => {
 // Criar análise é ação de gestão — o perfil Qualidade apenas registra leituras (PATCH).
 app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
   try {
-    const { categoria, produto, microrganismo, pontoColeta, resultado, lote, dataInoculacao, dataPrevistaLeitura } = req.body;
+    const { categoria, produto, microrganismo, pontoColeta, resultado, lote, observacoes, dataInoculacao, dataPrevistaLeitura } = req.body;
 
     // resultado e lote são opcionais: sem resultado a análise nasce PENDENTE.
     if (!categoria || !produto || !microrganismo || !pontoColeta) {
@@ -1233,6 +1236,7 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
       dataPrevistaLeitura: dataPrevistaLeituraFinal,
       dataRealLeitura: temResultado ? agora : null,
       lote: lote?.trim() || "",
+      observacoes: observacoes?.trim() || "",
       produtoId: produto,
       produtoNome: produtoNome,
       categoria,
@@ -1254,6 +1258,7 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
         lote: analise.lote,
         pontoColeta: analise.pontoColeta,
         resultado: analise.resultado,
+        observacoes: analise.observacoes,
         statusConformidade: analise.statusConformidade,
         statusCiclo: analise.statusCiclo
       },
@@ -1273,7 +1278,7 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
 // PATCH atualizar análise
 app.patch("/api/analises/:id", autenticar, async (req, res) => {
   try {
-    const { resultado, lote, pontoColeta } = req.body;
+    const { resultado, lote, pontoColeta, observacoes } = req.body;
 
     const analiseAtual = await Analise.findById(req.params.id);
     if (!analiseAtual) {
@@ -1283,6 +1288,7 @@ app.patch("/api/analises/:id", autenticar, async (req, res) => {
     const dadosAtualizacao: any = {};
     if (lote !== undefined) dadosAtualizacao.lote = String(lote).trim();
     if (pontoColeta !== undefined) dadosAtualizacao.pontoColeta = String(pontoColeta).trim();
+    if (observacoes !== undefined) dadosAtualizacao.observacoes = String(observacoes).trim();
 
     // resultado só é tocado quando a chave vem no corpo — assim editar apenas o
     // lote não apaga um resultado já registrado.
@@ -1325,6 +1331,7 @@ app.patch("/api/analises/:id", autenticar, async (req, res) => {
       lote: "lote",
       pontoColeta: "ponto de coleta",
       resultado: "resultado",
+      observacoes: "observações",
       statusConformidade: "conformidade",
       statusCiclo: "ciclo"
     };
@@ -1377,6 +1384,7 @@ app.delete("/api/analises/:id", autenticar, autorizarQualidade, async (req, res)
         lote: analise.lote,
         pontoColeta: analise.pontoColeta,
         resultado: analise.resultado,
+        observacoes: analise.observacoes,
         statusConformidade: analise.statusConformidade
       },
       undefined,

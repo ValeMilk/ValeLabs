@@ -22,6 +22,7 @@ interface NovaAnaliseInline {
   padraominimo: number | '';
   padraomaximo: number | '';
   resultado: string;
+  observacoes: string;
   status: 'APROVADO' | 'REPROVADO' | '';
 }
 
@@ -34,6 +35,7 @@ const NOVA_ANALISE_VAZIA: NovaAnaliseInline = {
   padraominimo: '',
   padraomaximo: '',
   resultado: '',
+  observacoes: '',
   status: '',
 };
 
@@ -41,6 +43,7 @@ interface EdicaoInline {
   lote: string;
   ponto: string;
   resultado: string;
+  observacoes: string;
 }
 
 export function LancamentosPage() {
@@ -54,7 +57,7 @@ export function LancamentosPage() {
 
   const [novaAnalise, setNovaAnalise] = useState<NovaAnaliseInline>(NOVA_ANALISE_VAZIA);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [edicao, setEdicao] = useState<EdicaoInline>({ lote: '', ponto: '', resultado: '' });
+  const [edicao, setEdicao] = useState<EdicaoInline>({ lote: '', ponto: '', resultado: '', observacoes: '' });
 
   const pontosColeta = ['Único', 'Início', 'Meio', 'Fim', 'Base'];
 
@@ -219,6 +222,7 @@ export function LancamentosPage() {
       microrganismo: novaAnalise.microrganismo,
       pontoColeta: novaAnalise.ponto,
       resultado: novaAnalise.resultado ? parseFloat(novaAnalise.resultado) : null,
+      observacoes: novaAnalise.observacoes.trim(),
       dataInoculacao: new Date().toISOString(),
       dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
@@ -242,6 +246,7 @@ export function LancamentosPage() {
       lote: analise.lote || '',
       ponto: analise.pontoColeta || '',
       resultado: analise.resultado !== null && analise.resultado !== undefined ? String(analise.resultado) : '',
+      observacoes: analise.observacoes || '',
     });
     setErro('');
   };
@@ -253,6 +258,7 @@ export function LancamentosPage() {
         lote: edicao.lote.trim(),
         pontoColeta: edicao.ponto,
         resultado: edicao.resultado.trim() === '' ? null : edicao.resultado.trim(),
+        observacoes: edicao.observacoes.trim(),
       });
       setEditandoId(null);
       setMensagem('Análise atualizada com sucesso!');
@@ -363,6 +369,9 @@ export function LancamentosPage() {
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Status
+                </th>
+                <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
+                  Observações
                 </th>
                 <th className="text-left px-4 py-3 text-sm font-semibold text-gray-900">
                   Ações
@@ -500,6 +509,17 @@ export function LancamentosPage() {
                     </span>
                   </td>
 
+                  {/* Observações (opcional) */}
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={novaAnalise.observacoes}
+                      onChange={(e) => setNovaAnalise((prev) => ({ ...prev, observacoes: e.target.value }))}
+                      placeholder="Opcional"
+                      className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </td>
+
                   <td></td>
                 </tr>
               )}
@@ -507,7 +527,7 @@ export function LancamentosPage() {
               {/* Linha de Ações */}
               {mostraNovaLinha && (
                 <tr className="bg-blue-50 border-t-2 border-indigo-300">
-                  <td colSpan={10} className="px-4 py-3">
+                  <td colSpan={11} className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={salvarNovaAnalise}
@@ -531,7 +551,7 @@ export function LancamentosPage() {
               {/* Análises existentes */}
               {analises.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     Nenhuma análise registrada
                   </td>
                 </tr>
@@ -605,6 +625,21 @@ export function LancamentosPage() {
                         >
                           {analise.statusConformidade}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-xs">
+                        {emEdicao ? (
+                          <input
+                            type="text"
+                            value={edicao.observacoes}
+                            onChange={(e) => setEdicao((prev) => ({ ...prev, observacoes: e.target.value }))}
+                            placeholder="Opcional"
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          />
+                        ) : (
+                          <span className="line-clamp-2" title={analise.observacoes || ''}>
+                            {analise.observacoes || '-'}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">

@@ -197,6 +197,7 @@ export function ProdutoResumoPage() {
                   <th className="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-6 py-3">Ponto de coleta</th>
                   <th className="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-6 py-3">Resultado</th>
                   <th className="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-6 py-3">Conformidade</th>
+                  <th className="text-left text-xs font-medium text-gray-600 uppercase tracking-wider px-6 py-3">Observações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -220,6 +221,11 @@ export function ProdutoResumoPage() {
                     </td>
                     <td className="px-6 py-3">
                       <ConformidadePill status={linha.statusConformidade} />
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-700 max-w-xs">
+                      <span className="line-clamp-2" title={linha.observacoes || ''}>
+                        {linha.observacoes || '—'}
+                      </span>
                     </td>
                   </tr>
                 ))}

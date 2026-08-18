@@ -42,6 +42,7 @@ export interface Analise {
   dataPrevistaLeitura: Date;
   dataRealLeitura: Date | null;
   lote?: string;
+  observacoes?: string;
   produtoId: string;
   produtoNome?: string;
   categoria: string;
@@ -247,6 +248,7 @@ export interface ProdutoResumoLinha {
   pontoColeta: string;
   resultado: number | null;
   unidade: string;
+  observacoes: string;
   statusConformidade: StatusConformidade;
 }
 
@@ -271,6 +273,7 @@ export interface DashboardDetalheLinha {
   dataLeitura: string | null;
   pontoColeta: string;
   resultado: number | null;
+  observacoes: string;
   statusConformidade: StatusConformidade;
 }
 
