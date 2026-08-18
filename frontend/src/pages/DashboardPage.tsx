@@ -133,7 +133,9 @@ export function DashboardPage() {
                         {microrganismos.map((m) => {
                           const c = celula(p, m);
                           const faixa = faixaReprovacao(c?.percentual ?? null);
-                          const clicavel = !!c && c.percentual !== null && c.percentual > 0;
+                          // Clicável sempre que houver alguma análise lida — inclusive 0% de
+                          // reprovação, senão um par 100% aprovado fica sem forma de abrir o detalhe.
+                          const clicavel = !!c && c.percentual !== null;
                           return (
                             <td key={m} className="p-0 text-center align-middle min-w-[5rem]">
                               <button
