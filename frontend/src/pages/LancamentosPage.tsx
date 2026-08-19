@@ -218,7 +218,11 @@ export function LancamentosPage() {
       categoria: novaAnalise.categoria,
       microrganismo: novaAnalise.microrganismo,
       pontoColeta: novaAnalise.ponto,
-      resultado: novaAnalise.resultado ? parseFloat(novaAnalise.resultado) : null,
+      // Envia o texto bruto, não um parseFloat local — quem decide se é um número
+      // válido é o backend (calcularConformidade). Pré-converter aqui faria um
+      // resultado com letras virar NaN, que o JSON transforma em null ao serializar,
+      // e a análise nasceria PENDENTE em vez de REPROVADA.
+      resultado: novaAnalise.resultado.trim() === '' ? null : novaAnalise.resultado.trim(),
       observacoes: novaAnalise.observacoes.trim(),
       dataInoculacao: new Date().toISOString(),
       dataPrevistaLeitura: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
