@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getUsuario } from '../services/api';
-import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
+import { AlertCircle, Trash2, Edit2, Plus, Package } from 'lucide-react';
 import type { Produto } from '../types/shared-types';
+import { PageTitle } from '../components/PageTitle';
 
 export function CategoriaPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -141,10 +142,7 @@ export function CategoriaPage() {
   return (
     <div className="p-8">
       <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Categorias & Produtos</h1>
-          <p className="text-gray-600 mt-1">Organize produtos por categorias</p>
-        </div>
+        <PageTitle icon={Package} title="Categorias & Produtos" subtitle="Organize produtos por categorias" />
         <button
           onClick={abrirNovo}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

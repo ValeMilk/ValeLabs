@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Clock, ListChecks } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, LayoutDashboard, ListChecks } from 'lucide-react';
 import { api } from '../services/api';
 import type { DashboardHeatmap } from '../types/shared-types';
 import { diasAguardando, faixaReprovacao } from '../lib/dashboard';
+import { PageTitle } from '../components/PageTitle';
 
 export function DashboardPage() {
   const [dados, setDados] = useState<DashboardHeatmap | null>(null);
@@ -68,8 +69,13 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-1">Acompanhamento Microbiológico</h1>
-      <p className="text-gray-600 mb-8">Visão geral de produtos × microrganismos</p>
+      <div className="mb-8">
+        <PageTitle
+          icon={LayoutDashboard}
+          title="Acompanhamento Microbiológico"
+          subtitle="Visão geral de produtos × microrganismos"
+        />
+      </div>
 
       {/* Seção 1 — KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">

@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getUsuario } from '../services/api';
-import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
+import { AlertCircle, Trash2, Edit2, Plus, CheckCircle } from 'lucide-react';
+import { PageTitle } from '../components/PageTitle';
 
 interface Padrao {
   _id: string;
@@ -169,10 +170,11 @@ export function PadroesPage() {
   return (
     <div className="p-8">
       <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Padrões</h1>
-          <p className="text-gray-600 mt-1">Defina os padrões mínimos e máximos para cada microrganismo por categoria</p>
-        </div>
+        <PageTitle
+          icon={CheckCircle}
+          title="Padrões"
+          subtitle="Defina os padrões mínimos e máximos para cada microrganismo por categoria"
+        />
         <button
           onClick={abrirNovo}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

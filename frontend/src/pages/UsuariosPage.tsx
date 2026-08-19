@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { getUsuario } from '../services/api';
-import { AlertCircle, Trash2, Edit2, Plus } from 'lucide-react';
+import { AlertCircle, Trash2, Edit2, Plus, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { PageTitle } from '../components/PageTitle';
 
 interface Usuario {
   _id: string;
@@ -119,10 +120,11 @@ export function UsuariosPage() {
   return (
     <div className="p-8">
       <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Usuários</h1>
-          <p className="text-gray-600 mt-1">Adicione, edite ou remova usuários do sistema</p>
-        </div>
+        <PageTitle
+          icon={Users}
+          title="Gerenciamento de Usuários"
+          subtitle="Adicione, edite ou remova usuários do sistema"
+        />
         <button
           onClick={abrirNovoUsuario}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

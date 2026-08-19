@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, getUsuario } from '../services/api';
 import { podeGerenciar } from '../lib/perfis';
-import { AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { PageTitle } from '../components/PageTitle';
 
 interface LogAuditoria {
   _id: string;
@@ -118,8 +119,11 @@ export function AuditoriaPage() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Auditoria</h1>
-        <p className="text-gray-600 mt-1">Histórico de mudanças em lançamentos e padrões de qualidade</p>
+        <PageTitle
+          icon={Eye}
+          title="Auditoria"
+          subtitle="Histórico de mudanças em lançamentos e padrões de qualidade"
+        />
       </div>
 
       {/* Abas */}

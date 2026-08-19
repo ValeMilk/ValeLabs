@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { api, getUsuario } from '../services/api';
 import type { Analise, Produto } from '../types/shared-types';
 import { podeGerenciar } from '../lib/perfis';
-import { Plus, X, Check, Trash2, Edit2 } from 'lucide-react';
+import { Plus, X, Check, Trash2, Edit2, FileText } from 'lucide-react';
+import { PageTitle } from '../components/PageTitle';
 
 interface Padrao {
   _id: string;
@@ -307,10 +308,7 @@ export function LancamentosPage() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lançamentos</h1>
-          <p className="text-gray-600">Registre novas análises de laboratório</p>
-        </div>
+        <PageTitle icon={FileText} title="Lançamentos" subtitle="Registre novas análises de laboratório" />
         {!mostraNovaLinha && podeCriarEDeletar && (
           <button
             onClick={() => setMostraNovaLinha(true)}
