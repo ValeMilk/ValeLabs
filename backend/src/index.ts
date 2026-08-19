@@ -1165,6 +1165,38 @@ app.delete("/api/produtos/:id", autenticar, autorizarQualidade, async (req, res)
 
 // ========== ENDPOINTS ANÁLISES ==========
 
+// Conformidade depende só do limite máximo do padrão — não existe mais reprovação
+// por resultado baixo. Um resultado que não é um número válido (ex.: contém
+// letras) é tratado como erro de leitura e reprova direto, sem depender de padrão.
+function calcularConformidade(
+  resultadoBruto: any,
+  padrao: { limiteMaximo: number } | null
+): { statusConformidade: string; resultadoGravado: number | string | null } {
+  if (resultadoBruto === null || resultadoBruto === undefined) {
+    return { statusConformidade: "PENDENTE", resultadoGravado: null };
+  }
+  const texto = String(resultadoBruto).trim();
+  if (texto === "") {
+    return { statusConformidade: "PENDENTE", resultadoGravado: null };
+  }
+
+  const valor = Number(texto);
+  if (!Number.isFinite(valor)) {
+    // Number() (diferente de parseFloat) rejeita "10abc" inteiro — não existe
+    // leitura parcialmente numérica válida.
+    return { statusConformidade: "REPROVADO", resultadoGravado: texto };
+  }
+
+  if (!padrao) {
+    return { statusConformidade: "SEM_PADRÃO", resultadoGravado: valor };
+  }
+
+  return {
+    statusConformidade: valor <= padrao.limiteMaximo ? "APROVADO" : "REPROVADO",
+    resultadoGravado: valor
+  };
+}
+
 app.get("/api/analises", autenticar, async (req, res) => {
   try {
     const limite = parseInt(req.query.limite as string) || 50;
@@ -1210,16 +1242,8 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
     const produtoDoc = await Produto.findById(produto);
     const produtoNome = produtoDoc?.nome || produto;
     
-    let statusConformidade = "PENDENTE";
-    const temResultado = resultado !== null && resultado !== undefined && resultado !== "";
-    if (padrao && temResultado) {
-      const res_num = parseFloat(resultado);
-      if (res_num >= padrao.limiteMinimo && res_num <= padrao.limiteMaximo) {
-        statusConformidade = "APROVADO";
-      } else {
-        statusConformidade = "REPROVADO";
-      }
-    }
+    const { statusConformidade, resultadoGravado } = calcularConformidade(resultado, padrao);
+    const temResultado = resultadoGravado !== null;
 
     const dataPrevistaLeituraFinal = dataPrevistaLeitura ? new Date(dataPrevistaLeitura) : new Date();
     const agora = new Date();
@@ -1242,9 +1266,9 @@ app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
       categoria,
       pontoColeta,
       microrganismo,
-      resultado: temResultado ? parseFloat(resultado) : null,
+      resultado: resultadoGravado,
       statusCiclo,
-      statusConformidade: statusConformidade,
+      statusConformidade,
       criadoPor: (req as any).usuario?.nome || "Sistema"
     });
 
@@ -1292,32 +1316,25 @@ app.patch("/api/analises/:id", autenticar, async (req, res) => {
 
     // resultado só é tocado quando a chave vem no corpo — assim editar apenas o
     // lote não apaga um resultado já registrado.
-    const temResultado = resultado !== null && resultado !== undefined && resultado !== "";
     if (resultado !== undefined) {
-      dadosAtualizacao.resultado = temResultado ? parseFloat(resultado) : null;
-      if (!temResultado) {
-        // Limpar o resultado devolve a análise ao estado pendente.
-        dadosAtualizacao.statusConformidade = "PENDENTE";
-        dadosAtualizacao.dataRealLeitura = null;
-        dadosAtualizacao.statusCiclo =
-          new Date(analiseAtual.dataPrevistaLeitura) <= new Date() ? "aguardando_leitura" : "inoculada";
-      }
-    }
-
-    if (temResultado) {
       const padrao = await Padrao.findOne({
         categoria: analiseAtual.categoria,
         microrganismo: analiseAtual.microrganismo,
         ativo: true
       });
-      const res_num = parseFloat(resultado);
-      dadosAtualizacao.statusConformidade = !padrao
-        ? "SEM_PADRÃO"
-        : res_num >= padrao.limiteMinimo && res_num <= padrao.limiteMaximo
-          ? "APROVADO"
-          : "REPROVADO";
-      dadosAtualizacao.dataRealLeitura = new Date();
-      dadosAtualizacao.statusCiclo = "lida";
+      const { statusConformidade, resultadoGravado } = calcularConformidade(resultado, padrao);
+      dadosAtualizacao.resultado = resultadoGravado;
+      dadosAtualizacao.statusConformidade = statusConformidade;
+
+      if (resultadoGravado !== null) {
+        dadosAtualizacao.dataRealLeitura = new Date();
+        dadosAtualizacao.statusCiclo = "lida";
+      } else {
+        // Limpar o resultado devolve a análise ao estado pendente.
+        dadosAtualizacao.dataRealLeitura = null;
+        dadosAtualizacao.statusCiclo =
+          new Date(analiseAtual.dataPrevistaLeitura) <= new Date() ? "aguardando_leitura" : "inoculada";
+      }
     }
 
     const analise = await Analise.findByIdAndUpdate(

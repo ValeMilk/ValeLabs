@@ -139,18 +139,19 @@ export function LancamentosPage() {
     return produto?.nome || produtoId;
   };
 
-  // Calcular status automaticamente
-  const calcularStatus = (resultado: string, min: number | '', max: number | ''): 'APROVADO' | 'REPROVADO' | '' => {
-    if (!resultado || min === '' || max === '') return '';
+  // Conformidade depende só do padrão máximo — o mínimo é só referência.
+  // Resultado que não é um número válido (ex.: contém letras) reprova direto,
+  // mesmo sem padrão definido. Espelha calcularConformidade() no backend.
+  const calcularStatus = (resultado: string, max: number | ''): 'APROVADO' | 'REPROVADO' | '' => {
+    const texto = resultado.trim();
+    if (!texto) return '';
 
-    const res = parseFloat(resultado);
-    if (isNaN(res)) return '';
+    const res = Number(texto);
+    if (!Number.isFinite(res)) return 'REPROVADO';
 
-    if (res >= (min as number) && res <= (max as number)) {
-      return 'APROVADO';
-    } else {
-      return 'REPROVADO';
-    }
+    if (max === '') return '';
+
+    return res <= max ? 'APROVADO' : 'REPROVADO';
   };
 
   const handleCategoriaChange = (categoria: string) => {
@@ -191,11 +192,7 @@ export function LancamentosPage() {
   };
 
   const handleResultadoChange = (resultado: string) => {
-    const novoStatus = calcularStatus(
-      resultado,
-      novaAnalise.padraominimo,
-      novaAnalise.padraomaximo
-    );
+    const novoStatus = calcularStatus(resultado, novaAnalise.padraomaximo);
     setNovaAnalise((prev) => ({
       ...prev,
       resultado,
