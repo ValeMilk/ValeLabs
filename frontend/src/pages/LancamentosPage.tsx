@@ -62,8 +62,8 @@ export function LancamentosPage() {
 
   const pontosColeta = ['Único', 'Início', 'Meio', 'Fim', 'Base'];
 
-  // O perfil Qualidade apenas registra leituras: edita análises, mas não cria nem deleta.
-  const podeCriarEDeletar = podeGerenciar(getUsuario()?.perfil);
+  // Qualidade cria e edita lançamentos normalmente — só deletar fica restrito à gestão.
+  const podeDeletar = podeGerenciar(getUsuario()?.perfil);
 
   useEffect(() => {
     carregarDados();
@@ -309,7 +309,7 @@ export function LancamentosPage() {
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
         <PageTitle icon={FileText} title="Lançamentos" subtitle="Registre novas análises de laboratório" />
-        {!mostraNovaLinha && podeCriarEDeletar && (
+        {!mostraNovaLinha && (
           <button
             onClick={() => setMostraNovaLinha(true)}
             className="flex items-center space-x-2 bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
@@ -671,7 +671,7 @@ export function LancamentosPage() {
                                 <Edit2 size={14} />
                                 <span className="text-xs">Editar</span>
                               </button>
-                              {podeCriarEDeletar && (
+                              {podeDeletar && (
                                 <button
                                   onClick={() => handleDeletarAnalise(analise._id)}
                                   className="flex items-center space-x-1 text-red-600 hover:text-red-900 hover:bg-red-50 px-2 py-1 rounded transition-colors"

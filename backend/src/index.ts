@@ -1225,8 +1225,9 @@ app.get("/api/analises", autenticar, async (req, res) => {
   }
 });
 
-// Criar análise é ação de gestão — o perfil Qualidade apenas registra leituras (PATCH).
-app.post("/api/analises", autenticar, autorizarQualidade, async (req, res) => {
+// Criar e editar (PATCH) lançamentos são liberados a qualquer perfil autenticado,
+// incluindo Qualidade — só deletar continua restrito à gestão.
+app.post("/api/analises", autenticar, async (req, res) => {
   try {
     const { categoria, produto, microrganismo, pontoColeta, resultado, lote, observacoes, dataInoculacao, dataPrevistaLeitura } = req.body;
 
