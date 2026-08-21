@@ -1,0 +1,96 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend — type-check & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm run type-check
+        working-directory: backend
+      - run: npm run build
+        working-directory: backend
+
+  frontend:
+    name: Frontend — type-check & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  # Só roda em push direto pro main (ou disparo manual) — nunca em PR, e só
+  # depois dos dois jobs de CI passarem.
+  deploy:
+    name: Deploy para produção
+    needs: [backend, frontend]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar chave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 72.61.62.17 >> ~/.ssh/known_hosts
+
+      - name: Atualizar código e rodar deploy no servidor
+        run: |
+          ssh -i ~/.ssh/deploy_key root@72.61.62.17 '
+            set -euo pipefail
+            cd /root/valelabs
+            git fetch origin
+            git reset --hard origin/main
+            bash deploy/remote-deploy.sh
+          '
+
+      - name: Verificar saúde do backend
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "http://72.61.62.17:3002/api/health"; then
+              echo "backend respondendo"
+              exit 0
+            fi
+            echo "tentativa $i sem resposta, aguardando..."
+            sleep 5
+          done
+          echo "::error::backend não respondeu depois do deploy"
+          exit 1
+
+      - name: Verificar saúde do frontend
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "http://72.61.62.17:8083/"; then
+              echo "frontend respondendo"
+              exit 0
+            fi
+            echo "tentativa $i sem resposta, aguardando..."
+            sleep 5
+          done
+          echo "::error::frontend não respondeu depois do deploy"
+          exit 1
+
+      - name: Remover chave privada do runner
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
