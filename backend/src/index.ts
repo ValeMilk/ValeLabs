@@ -78,6 +78,17 @@ const microrganismoSchema = new mongoose.Schema({
   criadoEm: { type: Date, default: Date.now }
 });
 
+// Entidade "macro" dos Parâmetros globais — hoje só guarda a faixa de pH.
+// Padrão, Produto e Análise continuam usando categoria como string solta;
+// esta coleção não normaliza nem faz cascata sobre elas.
+const categoriaSchema = new mongoose.Schema({
+  nome: { type: String, required: true, unique: true },
+  phMinimo: { type: Number, required: true },
+  phMaximo: { type: Number, required: true },
+  ativo: { type: Boolean, default: true },
+  criadoEm: { type: Date, default: Date.now }
+});
+
 const analiseSchema = new mongoose.Schema({
   dataInoculacao: { type: Date, required: true },
   dataPrevistaLeitura: { type: Date, required: true },
@@ -141,6 +152,7 @@ const Microrganismo = mongoose.model("Microrganismo", microrganismoSchema);
 const Analise = mongoose.model("Analise", analiseSchema);
 const AuditoriaPadrao = mongoose.model("AuditoriaPadrao", auditoriaPadraoSchema);
 const AuditoriaAnalise = mongoose.model("AuditoriaAnalise", auditoriaAnaliseSchema);
+const Categoria = mongoose.model("Categoria", categoriaSchema);
 
 // ========== MIDDLEWARE AUTENTICAÇÃO & AUTORIZAÇÃO ==========
 function autenticar(req: any, res: any, next: any) {
@@ -1063,6 +1075,95 @@ app.delete("/api/padroes/:id", autenticar, autorizarQualidade, async (req, res) 
       sucesso: true,
       mensagem: "Padrão deletado",
       dados: { categoria: padrao.categoria, microrganismo: padrao.microrganismo }
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+// ========== PARÂMETROS: CATEGORIA ==========
+// Entidade "macro" da arquitetura de parâmetros (categoria → produto, no futuro).
+// Leitura aberta a qualquer autenticado — dado global pra outras telas consumirem.
+
+app.get("/api/parametros/categorias", autenticar, async (req, res) => {
+  try {
+    const categorias = await Categoria.find({ ativo: true }).sort("nome");
+    res.json({
+      sucesso: true,
+      mensagem: "Categorias carregadas",
+      dados: categorias
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.post("/api/parametros/categorias", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const { nome, phMinimo, phMaximo } = req.body;
+
+    if (!nome || !nome.trim() || phMinimo === undefined || phMaximo === undefined) {
+      return res.status(400).json({ sucesso: false, mensagem: "Nome, pH mínimo e pH máximo são obrigatórios" });
+    }
+
+    const existe = await Categoria.findOne({ nome: nome.trim() });
+    if (existe) {
+      return res.status(409).json({ sucesso: false, mensagem: "Categoria já existe" });
+    }
+
+    const categoria = new Categoria({
+      nome: nome.trim(),
+      phMinimo: parseFloat(phMinimo),
+      phMaximo: parseFloat(phMaximo)
+    });
+    await categoria.save();
+
+    res.status(201).json({
+      sucesso: true,
+      mensagem: "Categoria criada",
+      dados: categoria
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.put("/api/parametros/categorias/:id", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const { nome, phMinimo, phMaximo, ativo } = req.body;
+
+    const dadosAtualizacao: any = {};
+    if (nome !== undefined) dadosAtualizacao.nome = nome.trim();
+    if (phMinimo !== undefined) dadosAtualizacao.phMinimo = parseFloat(phMinimo);
+    if (phMaximo !== undefined) dadosAtualizacao.phMaximo = parseFloat(phMaximo);
+    if (ativo !== undefined) dadosAtualizacao.ativo = ativo;
+
+    const categoria = await Categoria.findByIdAndUpdate(req.params.id, dadosAtualizacao, { new: true });
+    if (!categoria) {
+      return res.status(404).json({ sucesso: false, mensagem: "Categoria não encontrada" });
+    }
+
+    res.json({
+      sucesso: true,
+      mensagem: "Categoria atualizada",
+      dados: categoria
+    });
+  } catch (erro: any) {
+    res.status(500).json({ sucesso: false, mensagem: erro.message });
+  }
+});
+
+app.delete("/api/parametros/categorias/:id", autenticar, autorizarQualidade, async (req, res) => {
+  try {
+    const categoria = await Categoria.findByIdAndDelete(req.params.id);
+    if (!categoria) {
+      return res.status(404).json({ sucesso: false, mensagem: "Categoria não encontrada" });
+    }
+
+    res.json({
+      sucesso: true,
+      mensagem: "Categoria deletada",
+      dados: { nome: categoria.nome }
     });
   } catch (erro: any) {
     res.status(500).json({ sucesso: false, mensagem: erro.message });

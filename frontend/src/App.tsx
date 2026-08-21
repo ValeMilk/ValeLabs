@@ -7,6 +7,7 @@ import { CategoriaPage } from './pages/CategoriaPage';
 import { ProdutoPage } from './pages/ProdutoPage';
 import { LancamentosPage } from './pages/LancamentosPage';
 import { PadroesPage } from './pages/PadroesPage';
+import { ParametrosPage } from './pages/ParametrosPage';
 import { MicroorganismoPage } from './pages/MicroorganismoPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import { AuditoriaPage } from './pages/AuditoriaPage';
@@ -78,6 +79,15 @@ function App() {
           element={
             <ProtectedRoute perfis={PERFIS_GESTAO}>
               <PadroesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/parametros"
+          element={
+            <ProtectedRoute perfis={PERFIS_GESTAO}>
+              <ParametrosPage />
             </ProtectedRoute>
           }
         />

@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, FileText, Package, CheckCircle, Eye, Microscope, Users } from 'lucide-react';
+import { LogOut, LayoutDashboard, FileText, Package, CheckCircle, Eye, Microscope, Users, SlidersHorizontal } from 'lucide-react';
 import { logout, getUsuario } from '../services/api';
 import { ehAdmin, podeGerenciar } from '../lib/perfis';
 import { ExpandableTabs } from './ui/expandable-tabs';
@@ -31,6 +31,7 @@ export function Layout({ children }: LayoutProps) {
         ? [
             { title: 'Produtos', icon: Package, path: '/categorias' },
             { title: 'Padrões', icon: CheckCircle, path: '/padroes' },
+            { title: 'Parâmetros', icon: SlidersHorizontal, path: '/parametros' },
             { title: 'Auditoria', icon: Eye, path: '/auditoria' },
             { title: 'Microrganismos', icon: Microscope, path: '/microrganismos' },
           ]

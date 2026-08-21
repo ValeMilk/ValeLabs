@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, getUsuario } from '../services/api';
 import { AlertCircle, Trash2, Edit2, Plus, CheckCircle } from 'lucide-react';
 import { PageTitle } from '../components/PageTitle';
@@ -28,7 +28,8 @@ export function PadroesPage() {
   const [erro, setErro] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editando, setEditando] = useState<Padrao | null>(null);
-  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [searchParams] = useSearchParams();
+  const [filtroCategoria, setFiltroCategoria] = useState(searchParams.get('categoria') || '');
   const [salvando, setSalvando] = useState(false);
   const navigate = useNavigate();
 
